@@ -1,0 +1,24 @@
+# personal data never goes in the repo
+data/
+*.json.bak
+mixes.json
+library.json
+traktor_history.json
+djay_screen_keys.json
+djay_screen.txt
+# builds and junk
+dist/
+build/
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+.env
+.env.*
+*.mp3
+*.m4a
+*.wav
+*.aif
+*.aiff
+*.flac
+Impact.ttf

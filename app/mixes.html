@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Portal Mixes</title>
+<link rel="icon" href="data:,">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0c1018;color:#f4f5f8;font-family:Arial,sans-serif;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+header{padding:12px 20px;background:#171e2b;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+h1{font-size:21px;margin:0;letter-spacing:2px;flex:1}
+header a{color:#9aaac1;font-size:13px;text-decoration:none;border:1px solid #46536a;border-radius:9px;padding:9px 12px}
+.tabs{display:flex;gap:6px}
+.tab{min-height:44px;padding:0 16px}
+button{border:1px solid #46536a;border-radius:9px;background:#303d53;color:white;min-height:48px;font-weight:bold;cursor:pointer;font-size:14px;font-family:inherit}
+button:active{filter:brightness(1.3)}
+button.on{background:#00ad94;color:#081319;border-color:#00ad94}
+.view{display:none;padding:12px}
+.view.show{display:block}
+.decks{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:stretch}
+.deck{background:#171e2b;border-radius:13px;padding:12px;min-width:0;border:2px solid transparent}
+.deck.playing{border-color:#40d8fc}
+.deck.b.playing{border-color:#ff83cf}
+.deck h2{margin:0 0 8px;font-size:20px;display:flex;justify-content:space-between;align-items:center}
+.a h2 span:first-child{color:#40d8fc}.b h2 span:first-child{color:#ff83cf}
+.live{font-size:11px;letter-spacing:1px;color:#081319;background:#40d8fc;border-radius:6px;padding:3px 7px}
+.b .live{background:#ff83cf}
+.song{background:#222c3c;border-radius:10px;padding:12px;min-height:84px;cursor:pointer}
+.song .t{font-size:18px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song .ar{color:#b4c2d7;font-size:14px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song.empty{color:#7d8ba1;display:flex;align-items:center;justify-content:center;font-size:15px}
+.chips{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.chip{font-size:12px;background:#303d53;border-radius:6px;padding:3px 7px;color:#d6deea}
+.chip.k{background:#2b3b2e;color:#9bd6a6}.chip.p{background:#4a3a12;color:#ffd77a}
+.chip.warn{background:#3b2b2b;color:#ffb0a0}
+.middle{display:flex;flex-direction:column;gap:8px;justify-content:center;min-width:150px}
+#good{min-height:110px;font-size:22px;background:#00ad94;color:#081319;border-color:#00ad94;letter-spacing:1px}
+#good:disabled{background:#303d53;color:#7d8ba1;border-color:#46536a}
+#good.flash{background:#e2b442;border-color:#e2b442}
+.dir{font-size:13px;color:#9aaac1;text-align:center}
+.next{margin-top:12px;background:#171e2b;border-radius:13px;padding:12px}
+.next h3,.view h3{font-size:13px;letter-spacing:2px;color:#9aaac1;margin:4px 0 10px}
+.row{display:flex;gap:10px;align-items:center;background:#222c3c;border-radius:10px;padding:8px 10px;margin-bottom:6px;min-height:58px;cursor:pointer}
+.row .info{flex:1;min-width:0}
+.row .t{font-weight:bold;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .ar{color:#b4c2d7;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .meta{text-align:right;font-size:13px;color:#d6deea;white-space:nowrap}
+.row .why{font-size:11px;color:#9bd6a6}
+.row.proven{border-left:5px solid #e2b442}
+.row button{min-height:44px;padding:0 12px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.cols>div{min-width:0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.filters button{min-height:40px;padding:0 12px;font-size:13px}
+.muted{color:#7d8ba1;font-size:14px;padding:8px 2px}
+/* search sheet */
+#sheet{position:fixed;inset:0;background:rgba(5,8,13,.92);display:none;flex-direction:column;padding:12px;z-index:5}
+#sheet.show{display:flex}
+#sheet .top{display:flex;gap:8px;margin-bottom:10px}
+input[type=search],textarea{flex:1;font-size:18px;padding:12px;border-radius:10px;border:1px solid #46536a;background:#171e2b;color:white;font-family:inherit}
+#results{overflow:auto;flex:1}
+.review-top{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.review-top label{display:inline-flex;align-items:center;justify-content:center;border:1px solid #46536a;border-radius:9px;background:#303d53;min-height:48px;padding:0 16px;font-weight:bold;cursor:pointer}
+textarea{width:100%;min-height:90px;font-size:14px}
+.pair{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:center;background:#222c3c;border-radius:10px;padding:8px 10px;margin-bottom:6px}
+.pair .arrow{color:#9aaac1}
+.pair .nf{color:#ffb0a0;font-size:11px}
+.pair button{min-width:110px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#e2b442;color:#17120b;font-weight:bold;padding:12px 18px;border-radius:10px;display:none;z-index:9;align-items:center;gap:12px}
+#toast button{min-height:36px;background:#17120b;color:#ffd77a;border:none}
+@media(max-width:800px){.decks{grid-template-columns:minmax(0,1fr)}.middle{flex-direction:row}.middle>*{flex:1}#good{min-height:70px}.cols{grid-template-columns:minmax(0,1fr)}.pair{grid-template-columns:1fr;}.pair .arrow{display:none}}
+</style>
+</head>
+<body>
+<header>
+<h1>PORTAL / MIXES</h1>
+<div class="tabs">
+<button class="tab on" data-v="live">LIVE</button>
+<button class="tab" data-v="review">REVIEW A SET</button>
+<button class="tab" data-v="saved">MY MIXES</button>
+</div>
+<a href="/">STEMS + FX →</a>
+</header>
+
+<section class="view show" id="v-live">
+<div class="decks">
+  <div class="deck a" id="deckA"><h2><span>DECK A</span><span class="live">PLAYING</span></h2><div class="song empty" data-deck="A">Tap to pick a song</div></div>
+  <div class="middle">
+    <button id="good" disabled>GOOD<br>MIX</button>
+    <div class="dir" id="dir">A → B</div>
+    <button id="swap">⇄ NEXT IS<br>PLAYING</button>
+  </div>
+  <div class="deck b" id="deckB"><h2><span>DECK B</span><span class="live" style="display:none">PLAYING</span></h2><div class="song empty" data-deck="B">Tap to pick a song</div></div>
+</div>
+<div class="next">
+  <h3 id="nextTitle">WHAT'S NEXT</h3>
+  <div class="filters">
+    <button class="f on" data-f="all">ALL SHOWS</button>
+    <button class="f" data-f="same">SAME SHOW ONLY</button>
+    <button class="f" data-f="up">ENERGY UP (BPM +)</button>
+  </div>
+  <div class="cols"><div><h3>YOUR PROVEN MIXES</h3><div id="proven"></div></div><div><h3>GOOD MATCHES (BPM + KEY)</h3><div id="matches"></div></div></div>
+</div>
+</section>
+
+<section class="view" id="v-review">
+<h3>AFTER THE GIG</h3>
+<p class="muted">In djay on the iPad: open your set's History, add the songs to a new playlist, then export that playlist as a CSV file. Open it here (or paste the song list), and tap GOOD on the mixes that worked.</p>
+<div class="review-top">
+  <label>OPEN FILE<input type="file" id="file" accept=".csv,.txt,text/csv,text/plain" hidden></label>
+  <button id="pasteBtn">PASTE A LIST</button>
+  <span class="muted" id="reviewInfo"></span>
+</div>
+<div id="pasteBox" style="display:none;margin-bottom:12px"><textarea id="paste" placeholder="One song per line, in the order you played them:&#10;Artist - Title"></textarea><button id="readPaste" style="margin-top:6px;padding:0 18px">READ LIST</button></div>
+<div id="pairs"></div>
+</section>
+
+<section class="view" id="v-saved">
+<h3 id="savedTitle">MY MIXES</h3>
+<div class="filters"><input type="search" id="savedSearch" placeholder="Filter by song or artist"></div>
+<div id="saved"></div>
+</section>
+
+<div id="sheet"><div class="top"><input type="search" id="q" placeholder="Search songs or artists" autocomplete="off"><button id="close" style="padding:0 18px">CLOSE</button></div><div id="results"></div></div>
+<div id="toast"><span id="toastMsg"></span><button id="undo">UNDO</button></div>
+
+<script>
+var songs=[], byId={}, links=[], deck={A:null,B:null}, playing='A', picking=null, filter='all', lastSaved=null, toastTimer=null, reviewPairs=[];
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function api(path,body){
+  var o=body===undefined?{}:{method:'POST',headers:{'Content-Type':typeof body==='string'?'text/plain':'application/json'},body:typeof body==='string'?body:JSON.stringify(body)};
+  return fetch(path,o).then(function(r){if(!r.ok)throw Error(r.status);return r.json()});
+}
+function song(id){return byId[id]||(id&&id.indexOf('ext:')===0?{id:id,title:id.slice(4),artist:'',bpm:'',key:'',ext:true}:null)}
+// ---- key + tempo matching (Camelot wheel) ----
+function camel(k){var m=/^(\d+)([AB])$/.exec(k||'');return m?{n:+m[1],l:m[2]}:null}
+function keyFit(a,b){
+  var x=camel(a),y=camel(b); if(!x||!y)return null;
+  if(x.n===y.n&&x.l===y.l)return {s:3,why:'same key'};
+  var d=(y.n-x.n+12)%12;
+  if(x.l===y.l&&(d===1||d===11))return {s:2,why:'key '+(d===1?'+1':'-1')};
+  if(x.n===y.n)return {s:2,why:x.l==='A'?'minor→major':'major→minor'};
+  if(x.l===y.l&&d===2)return {s:1,why:'key +2 (energy)'};
+  return {s:0,why:''};
+}
+function bpmGap(a,b){ // percent change from a to b, allowing half/double time
+  if(!a||!b)return null; var best=null;
+  [1,2,0.5].forEach(function(m){var g=(b*m-a)/a*100; if(best===null||Math.abs(g)<Math.abs(best))best=g});
+  return best;
+}
+function chips(s){
+  var c='<span class="chip">'+(s.bpm?(s.est_bpm?'~':'')+Math.round(s.bpm)+' BPM':'BPM ?')+'</span>';
+  c+=s.key?'<span class="chip k">'+s.key+'</span>':'<span class="chip warn">key unknown</span>';
+  if(s.show)c+='<span class="chip">'+esc(s.show)+'</span>';
+  return '<div class="chips">'+c+'</div>';
+}
+function renderDeck(d){
+  var el=document.querySelector('#deck'+d+' .song'), s=song(deck[d]);
+  if(!s){el.className='song empty';el.innerHTML='Tap to pick a song';}
+  else{el.className='song';el.innerHTML='<div class="t">'+esc(s.title)+'</div><div class="ar">'+esc(s.artist)+'</div>'+(s.ext?'':chips(s));}
+  $('deckA').classList.toggle('playing',playing==='A');$('deckB').classList.toggle('playing',playing==='B');
+  document.querySelector('#deckA .live').style.display=playing==='A'?'':'none';
+  document.querySelector('#deckB .live').style.display=playing==='B'?'':'none';
+}
+function other(d){return d==='A'?'B':'A'}
+function render(){
+  renderDeck('A');renderDeck('B');
+  var from=deck[playing],to=deck[other(playing)];
+  $('good').disabled=!(from&&to);
+  $('dir').textContent=playing+' → '+other(playing);
+  renderNext();
+}
+function rowHTML(s,extra,cls){
+  return '<div class="row '+(cls||'')+'" data-id="'+esc(s.id)+'"><div class="info"><div class="t">'+esc(s.title)+'</div><div class="ar">'+esc(s.artist)+(s.show?' · '+esc(s.show):'')+'</div></div><div class="meta">'+(s.bpm?(s.est_bpm?'~':'')+Math.round(s.bpm)+' BPM':'')+(s.key?' · '+s.key:'')+(extra?'<div class="why">'+extra+'</div>':'')+'</div></div>';
+}
+function renderNext(){
+  var cur=song(deck[playing]);
+  $('nextTitle').textContent=cur?"WHAT'S NEXT AFTER "+cur.title.toUpperCase():"WHAT'S NEXT — pick the song that's playing";
+  if(!cur){$('proven').innerHTML='<div class="muted">Pick what\'s playing on Deck '+playing+'.</div>';$('matches').innerHTML='';return;}
+  var mine=links.filter(function(l){return l.from===cur.id}).sort(function(a,b){return b.count-a.count||b.last-a.last});
+  $('proven').innerHTML=mine.length?mine.map(function(l){var s=song(l.to);return s?rowHTML(s,'worked '+l.count+'×','proven'):''}).join(''):'<div class="muted">No saved mixes from this song yet.</div>';
+  var taken={};mine.forEach(function(l){taken[l.to]=1});
+  var out=[];
+  if(cur.bpm){
+    songs.forEach(function(s){
+      if(s.id===cur.id||taken[s.id])return;
+      if(filter==='same'&&s.show!==cur.show)return;
+      var g=bpmGap(cur.bpm,s.bpm); if(g===null||Math.abs(g)>6)return;
+      if(filter==='up'&&g<0)return;
+      var k=keyFit(cur.key,s.key); var ks=k?k.s:0.5;
+      if(k&&k.s===0)return;
+      out.push({s:s,score:ks*10-Math.abs(g),why:(k&&k.why?k.why+' · ':'key ? · ')+(g>=0?'+':'')+g.toFixed(1)+'% tempo'});
+    });
+  }
+  out.sort(function(a,b){return b.score-a.score});
+  $('matches').innerHTML=out.length?out.slice(0,25).map(function(o){return rowHTML(o.s,o.why)}).join(''):'<div class="muted">No close matches'+(cur.bpm?'':' (this song has no BPM)')+'.</div>';
+}
+// ---- picking songs ----
+function openSheet(d){picking=d;$('sheet').classList.add('show');$('q').value='';search();setTimeout(function(){$('q').focus()},50)}
+function search(){
+  var q=$('q').value.toLowerCase().trim().split(/\s+/).filter(Boolean), res=[];
+  for(var i=0;i<songs.length&&res.length<60;i++){var s=songs[i],h=(s.title+' '+s.artist).toLowerCase();if(q.every(function(w){return h.indexOf(w)>=0}))res.push(s)}
+  $('results').innerHTML=res.map(function(s){return rowHTML(s)}).join('')||'<div class="muted">No songs found.</div>';
+}
+function pick(d,id){deck[d]=id;render()}
+document.querySelectorAll('.deck .song').forEach(function(el){el.addEventListener('click',function(){openSheet(el.dataset.deck)})});
+$('q').addEventListener('input',search);
+$('close').addEventListener('click',function(){$('sheet').classList.remove('show')});
+$('results').addEventListener('click',function(e){var r=e.target.closest('.row');if(!r)return;pick(picking,r.dataset.id);$('sheet').classList.remove('show')});
+['proven','matches'].forEach(function(id){$(id).addEventListener('click',function(e){var r=e.target.closest('.row');if(r)pick(other(playing),r.dataset.id)})});
+$('swap').addEventListener('click',function(){playing=other(playing);render()});
+document.querySelectorAll('.f').forEach(function(b){b.addEventListener('click',function(){filter=b.dataset.f;document.querySelectorAll('.f').forEach(function(x){x.classList.toggle('on',x===b)});renderNext()})});
+// ---- saving ----
+function toast(msg,undoable){$('toastMsg').textContent=msg;$('undo').style.display=undoable?'':'none';$('toast').style.display='flex';clearTimeout(toastTimer);toastTimer=setTimeout(function(){$('toast').style.display='none'},5000)}
+function saveLink(a,b,source){
+  return api('/api/links',{from:a,to:b,source:source}).then(function(db){links=db.links;lastSaved={from:a,to:b};render();renderSaved();return db}).catch(function(){toast('Could not save — is the Mac running?')});
+}
+function removeLink(a,b){return api('/api/links/delete',{from:a,to:b}).then(function(db){links=db.links;render();renderSaved();renderPairs()})}
+$('good').addEventListener('click',function(){
+  var a=deck[playing],b=deck[other(playing)];if(!a||!b)return;
+  var before=links.filter(function(l){return l.from===a&&l.to===b})[0];
+  saveLink(a,b,'live').then(function(){
+    $('good').classList.add('flash');setTimeout(function(){$('good').classList.remove('flash')},600);
+    toast(before?'Saved again ('+(before.count+1)+'×)':'Saved: '+song(a).title+' → '+song(b).title,!before);
+  });
+});
+$('undo').addEventListener('click',function(){if(lastSaved)removeLink(lastSaved.from,lastSaved.to);$('toast').style.display='none'});
+// ---- review a set ----
+function loadHistory(text){
+  api('/api/history',text).then(function(r){
+    reviewPairs=r.pairs;$('reviewInfo').textContent=r.songs+' songs, '+r.pairs.length+' mixes'+(r.songs-r.found?' · '+(r.songs-r.found)+' not in your show folders':'');
+    renderPairs();
+  }).catch(function(){$('reviewInfo').textContent='Could not read that file.'});
+}
+function isSaved(a,b){return links.some(function(l){return l.from===a&&l.to===b})}
+function side(p){return '<div><div class="t" style="font-weight:bold">'+esc(p.title)+'</div><div class="ar" style="color:#b4c2d7;font-size:13px">'+esc(p.artist)+'</div>'+(p.found?'':'<div class="nf">not in show folders</div>')+'</div>'}
+function renderPairs(){
+  $('pairs').innerHTML=reviewPairs.map(function(p,i){var on=isSaved(p.from.id,p.to.id);return '<div class="pair">'+side(p.from)+'<div class="arrow">→</div>'+side(p.to)+'<button data-i="'+i+'" class="'+(on?'on':'')+'">'+(on?'✓ GOOD':'GOOD')+'</button></div>'}).join('');
+}
+$('pairs').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var p=reviewPairs[+b.dataset.i];
+  if(isSaved(p.from.id,p.to.id))removeLink(p.from.id,p.to.id);else saveLink(p.from.id,p.to.id,'history').then(renderPairs)});
+$('file').addEventListener('change',function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){loadHistory(r.result)};r.readAsText(f);this.value=''});
+$('pasteBtn').addEventListener('click',function(){$('pasteBox').style.display=''});
+$('readPaste').addEventListener('click',function(){loadHistory($('paste').value)});
+// ---- my mixes ----
+function renderSaved(){
+  var q=$('savedSearch').value.toLowerCase().trim();
+  var list=links.slice().sort(function(a,b){return b.last-a.last}).filter(function(l){var a=song(l.from),b=song(l.to);return !q||((a?a.title+' '+a.artist:'')+' '+(b?b.title+' '+b.artist:'')).toLowerCase().indexOf(q)>=0});
+  $('savedTitle').textContent='MY MIXES ('+links.length+')';
+  $('saved').innerHTML=list.map(function(l){var a=song(l.from)||{title:l.from,artist:''},b=song(l.to)||{title:l.to,artist:''};
+    return '<div class="pair">'+side({title:a.title,artist:a.artist,found:true})+'<div class="arrow">→</div>'+side({title:b.title,artist:b.artist,found:true})+'<button data-f="'+esc(l.from)+'" data-t="'+esc(l.to)+'">REMOVE · '+l.count+'×</button></div>'}).join('')||'<div class="muted">No saved mixes yet. Tap GOOD MIX during a set, or review a set after the gig.</div>';
+}
+$('saved').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;if(confirm('Remove this mix?'))removeLink(b.dataset.f,b.dataset.t)});
+$('savedSearch').addEventListener('input',renderSaved);
+document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('on',x===t)});
+  document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('show',v.id==='v-'+t.dataset.v)});
+})});
+Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
+  songs=r[0].songs;songs.forEach(function(s){byId[s.id]=s});links=r[1].links;render();renderSaved();
+}).catch(function(){$('proven').innerHTML='<div class="muted">Could not reach the Mac. Is the Portal server running?</div>'});
+</script>
+</body>
+</html>
