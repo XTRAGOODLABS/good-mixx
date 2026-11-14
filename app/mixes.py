@@ -2,12 +2,16 @@
 Plugged into server.py; the stems/FX page and MIDI are untouched."""
 import csv, io, json, os, re, threading, time
 from pathlib import Path
+import djay_live
 
 BASE = Path(__file__).parent
 DATA = BASE / "data"
 LIB = DATA / "library.json"
 MIXES = DATA / "mixes.json"
 lock = threading.Lock()
+STEMS = True          # False when run from mixes_server.py (no stems page)
+_djay = djay_live.Djay()
+_index = {"mtime": None, "both": {}, "title": {}}
 
 
 def _load():
@@ -78,6 +82,83 @@ def _match(items):
     return res
 
 
+def _lookup():
+    """Song list index, re-read only when library.json changes."""
+    mtime = LIB.stat().st_mtime if LIB.exists() else 0
+    if _index["mtime"] != mtime:
+        both, title = {}, {}
+        for s in _library()["songs"]:
+            both.setdefault(_norm(s["artist"]) + "|" + _norm(s["title"]), s)
+            title.setdefault(_norm(s["title"]), s)
+        _index.update(mtime=mtime, both=both, title=title)
+    return _index
+
+
+def _djay_keys():
+    """djay's own key for each song it has analysed: by artist+title, and by title when only one key fits."""
+    both, title = {}, {}
+    for t, a, key in _djay.keys():
+        both[_norm(a) + "|" + _norm(t)] = key
+        title.setdefault(_norm(t), set()).add(key)
+    return both, {t: next(iter(ks)) for t, ks in title.items() if len(ks) == 1}
+
+
+def _library_with_djay_keys():
+    """The song list, with djay's key used wherever djay has one (the file's own key kept as tagkey)."""
+    lib = _library()
+    both, title = _djay_keys()
+    for s in lib["songs"]:
+        k = both.get(_norm(s["artist"]) + "|" + _norm(s["title"])) or title.get(_norm(s["title"]))
+        if k and k != s.get("key"):
+            s["tagkey"] = s.get("key", "")
+            s["key"] = k
+    return lib
+
+
+def _djay_song(p):
+    """One djay play -> the matching song from the show folders, or a stand-in with djay's BPM/key."""
+    ix = _lookup()
+    s = ix["both"].get(_norm(p["artist"]) + "|" + _norm(p["title"])) or ix["title"].get(_norm(p["title"]))
+    if s:
+        return {"id": s["id"], "title": s["title"], "artist": s["artist"], "found": True, "key": p["djkey"]}
+    return {"id": "ext:" + (p["artist"] + " - " if p["artist"] else "") + p["title"], "title": p["title"],
+            "artist": p["artist"], "found": False, "bpm": p["bpm"] or "", "key": p["djkey"], "dj": True}
+
+
+def _now():
+    """What djay is playing right now on this Mac (left decks = A, right decks = B)."""
+    plays, err = _djay.plays()
+    out = {"ok": True, "stems": STEMS, "djay": not err, "error": err, "live": False, "age": None,
+           "rev": "", "decks": {"A": None, "B": None}, "playing": None}
+    if not plays:
+        return out
+    newest = plays[-1]
+    out["age"] = max(0, int(time.time() - newest["start"]))
+    out["live"] = out["age"] < djay_live.LIVE_WINDOW
+    out["rev"] = newest["key"]
+    out["playing"] = djay_live.side(newest["deck"])
+    for p in plays:
+        if p["session"] == newest["session"]:
+            out["decks"][djay_live.side(p["deck"])] = _djay_song(p)
+    return out
+
+
+def _sessions(limit=12):
+    """Recent djay sets played on this Mac, newest first, with every mix in each."""
+    plays, err = _djay.plays()
+    by = {}
+    for p in plays:
+        by.setdefault(p["session"], []).append(p)
+    out = []
+    for sid, ps in sorted(by.items(), key=lambda kv: kv[1][0]["start"], reverse=True)[:limit]:
+        songs = [_djay_song(p) for p in ps]
+        pairs = [{"from": _djay_song(a), "to": _djay_song(b)} for a, b in djay_live.pairs_for(ps)]
+        pairs = [x for x in pairs if x["from"]["id"] != x["to"]["id"]]
+        out.append({"id": sid, "start": int(ps[0]["start"]), "songs": len(ps),
+                    "found": sum(s["found"] for s in songs), "pairs": pairs})
+    return {"djay": not err, "error": err, "sessions": out}
+
+
 def _send(h, code, body=b"", ctype="application/json"):
     if isinstance(body, (dict, list)):
         body = json.dumps(body, ensure_ascii=False).encode()
@@ -95,10 +176,14 @@ def handle_get(h):
     if path in ("/mixes", "/mixes.html"):
         return _send(h, 200, (BASE / "mixes.html").read_bytes(), "text/html")
     if path == "/api/library":
-        return _send(h, 200, LIB.read_bytes() if LIB.exists() else b'{"songs":[]}')
+        return _send(h, 200, _library_with_djay_keys() if LIB.exists() else {"songs": []})
     if path == "/api/links":
         with lock:
             return _send(h, 200, _load())
+    if path == "/api/now":
+        return _send(h, 200, _now())
+    if path == "/api/djay/sessions":
+        return _send(h, 200, _sessions())
     return False
 
 
