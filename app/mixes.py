@@ -88,8 +88,9 @@ def _lookup():
     if _index["mtime"] != mtime:
         both, title = {}, {}
         for s in _library()["songs"]:
-            both.setdefault(_norm(s["artist"]) + "|" + _norm(s["title"]), s)
-            title.setdefault(_norm(s["title"]), s)
+            for d, k in ((both, _norm(s["artist"]) + "|" + _norm(s["title"])), (title, _norm(s["title"]))):
+                if k not in d or (s.get("key") and not d[k].get("key")):  # prefer a copy that has a key
+                    d[k] = s
         _index.update(mtime=mtime, both=both, title=title)
     return _index
 
@@ -120,7 +121,7 @@ def _djay_song(p):
     ix = _lookup()
     s = ix["both"].get(_norm(p["artist"]) + "|" + _norm(p["title"])) or ix["title"].get(_norm(p["title"]))
     if s:
-        return {"id": s["id"], "title": s["title"], "artist": s["artist"], "found": True, "key": p["djkey"]}
+        return {"id": s["id"], "title": s["title"], "artist": s["artist"], "found": True, "key": p["djkey"] or s.get("key", "")}
     return {"id": "ext:" + (p["artist"] + " - " if p["artist"] else "") + p["title"], "title": p["title"],
             "artist": p["artist"], "found": False, "bpm": p["bpm"] or "", "key": p["djkey"], "dj": True}
 
