@@ -91,7 +91,7 @@ textarea{width:100%;min-height:90px;font-size:14px}
 </header>
 
 <section class="view show" id="v-live">
-<div id="djbar"><span class="dot"></span><span class="msg" id="djMsg">Checking for djay…</span><button id="djToggle" style="display:none">PICK BY HAND</button></div>
+<div id="djbar"><span class="dot"></span><span class="msg" id="djMsg">Checking for your DJ app…</span><button id="djToggle" style="display:none">PICK BY HAND</button></div>
 <div class="decks">
   <div class="deck a" id="deckA"><h2><span>DECK A</span><span class="live">PLAYING</span></h2><div class="song empty" data-deck="A">Tap to pick a song</div></div>
   <div class="middle">
@@ -114,11 +114,11 @@ textarea{width:100%;min-height:90px;font-size:14px}
 
 <section class="view" id="v-review">
 <h3>AFTER THE GIG</h3>
-<p class="muted">Played the set in djay on this Mac? Tap FROM DJAY ON THIS MAC and pick the set. In djay on the iPad: open your set's History, add the songs to a new playlist, then export that playlist as a CSV file. Open it here (or paste the song list), and tap GOOD on the mixes that worked.</p>
+<p class="muted">Played the set in djay or Traktor on this Mac? Tap FROM THIS MAC and pick the set. In djay on the iPad: open your set's History, add the songs to a new playlist, then export that playlist as a CSV file. Open it here (or paste the song list), and tap GOOD on the mixes that worked.</p>
 <div class="review-top">
   <label>OPEN FILE<input type="file" id="file" accept=".csv,.txt,text/csv,text/plain" hidden></label>
   <button id="pasteBtn">PASTE A LIST</button>
-  <button id="djaySets">FROM DJAY ON THIS MAC</button>
+  <button id="djaySets">FROM THIS MAC</button>
   <span class="muted" id="reviewInfo"></span>
 </div>
 <div id="pasteBox" style="display:none;margin-bottom:12px"><textarea id="paste" placeholder="One song per line, in the order you played them:&#10;Artist - Title"></textarea><button id="readPaste" style="margin-top:6px;padding:0 18px">READ LIST</button></div>
@@ -138,6 +138,10 @@ textarea{width:100%;min-height:90px;font-size:14px}
 <script>
 var songs=[], byId={}, links=[], deck={A:null,B:null}, playing='A', picking=null, filter='all', lastSaved=null, toastTimer=null, reviewPairs=[];
 var follow=true, dj=null, djSig='', savedRev=null, djSets=[]; // djay on this Mac
+function onTk(){return !!(dj&&(dj.source==='traktor'||(!dj.source&&dj.traktor)))}
+function dn(){return onTk()?'Traktor':'djay'}
+// keys are stored as Camelot (8A); on Traktor show Traktor's own style (1m)
+function kd(k){var m=/^(\d{1,2})([AB])$/.exec(k||'');if(!m||!onTk())return k;return ((+m[1]+4)%12+1)+(m[2]==='A'?'m':'d')}
 function auto(){return !!(follow&&dj&&dj.djay&&dj.live&&dj.playing)}
 function mixFrom(){return auto()?deck[other(playing)]:deck[playing]}
 function mixTo(){return auto()?deck[playing]:deck[other(playing)]}
@@ -166,7 +170,7 @@ function bpmGap(a,b){ // percent change from a to b, allowing half/double time
 }
 function chips(s){
   var c='<span class="chip">'+(s.bpm?(s.est_bpm?'~':'')+Math.round(s.bpm)+' BPM':'BPM ?')+'</span>';
-  c+=s.key?'<span class="chip k">'+s.key+'</span>':'<span class="chip warn">key unknown</span>';
+  c+=s.key?'<span class="chip k">'+kd(s.key)+'</span>':'<span class="chip warn">key unknown</span>';
   if(s.show)c+='<span class="chip">'+esc(s.show)+'</span>';
   return '<div class="chips">'+c+'</div>';
 }
@@ -190,7 +194,7 @@ function render(){
   renderNext();
 }
 function rowHTML(s,extra,cls){
-  return '<div class="row '+(cls||'')+'" data-id="'+esc(s.id)+'"><div class="info"><div class="t">'+esc(s.title)+'</div><div class="ar">'+esc(s.artist)+(s.show?' · '+esc(s.show):'')+'</div></div><div class="meta">'+(s.bpm?(s.est_bpm?'~':'')+Math.round(s.bpm)+' BPM':'')+(s.key?' · '+s.key:'')+(extra?'<div class="why">'+extra+'</div>':'')+'</div></div>';
+  return '<div class="row '+(cls||'')+'" data-id="'+esc(s.id)+'"><div class="info"><div class="t">'+esc(s.title)+'</div><div class="ar">'+esc(s.artist)+(s.show?' · '+esc(s.show):'')+'</div></div><div class="meta">'+(s.bpm?(s.est_bpm?'~':'')+Math.round(s.bpm)+' BPM':'')+(s.key?' · '+kd(s.key):'')+(extra?'<div class="why">'+extra+'</div>':'')+'</div></div>';
 }
 function renderNext(){
   var cur=song(deck[playing]);
@@ -226,7 +230,7 @@ document.querySelectorAll('.deck .song').forEach(function(el){el.addEventListene
 $('q').addEventListener('input',search);
 $('close').addEventListener('click',function(){$('sheet').classList.remove('show')});
 $('results').addEventListener('click',function(e){var r=e.target.closest('.row');if(!r)return;if(auto()){follow=false;toast('Picking by hand now. Tap FOLLOW DJAY to go back.')}pick(picking,r.dataset.id);$('sheet').classList.remove('show')});
-['proven','matches'].forEach(function(id){$(id).addEventListener('click',function(e){var r=e.target.closest('.row');if(!r)return;if(auto()){toast('Load it in djay — it will show up here by itself.');return}pick(other(playing),r.dataset.id)})});
+['proven','matches'].forEach(function(id){$(id).addEventListener('click',function(e){var r=e.target.closest('.row');if(!r)return;if(auto()){toast('Load it in '+dn()+' — it will show up here by itself.');return}pick(other(playing),r.dataset.id)})});
 $('swap').addEventListener('click',function(){playing=other(playing);render()});
 document.querySelectorAll('.f').forEach(function(b){b.addEventListener('click',function(){filter=b.dataset.f;document.querySelectorAll('.f').forEach(function(x){x.classList.toggle('on',x===b)});renderNext()})});
 // ---- saving ----
@@ -251,10 +255,10 @@ $('undo').addEventListener('click',function(){savedRev=null;if(lastSaved)removeL
 function renderBar(){
   var on=auto(), msg;
   if(!dj)msg="Can't reach the Mac.";
-  else if(!dj.djay)msg="djay's library wasn't found on this Mac — pick songs by hand.";
+  else if(!dj.djay)msg="No djay or Traktor found on this Mac yet — pick songs by hand.";
   else if(!follow)msg='Picking by hand.';
-  else if(on)msg='Following djay — songs fill in by themselves.';
-  else msg='Waiting for djay — start a song and it will show up here.';
+  else if(on)msg='Following '+dn()+' — songs fill in by themselves.';
+  else msg='Waiting for '+dn()+' — start a song and it will show up here.';
   $('djbar').classList.toggle('on',on);
   $('djMsg').textContent=msg;
   $('djToggle').style.display=dj&&dj.djay?'':'none';
@@ -272,7 +276,7 @@ function applyDj(){
 }
 function poll(){
   api('/api/now').then(function(r){
-    var sig=JSON.stringify([r.rev,r.live,r.djay,r.decks]);
+    var sig=JSON.stringify([r.rev,r.live,r.djay,r.decks,r.source]);
     dj=r; if(r.stems===false)$('stemsLink').style.display='none';
     if(sig!==djSig){djSig=sig;applyDj();render()}
   }).catch(function(){if(dj){dj=null;djSig='';renderBar()}}).then(function(){setTimeout(poll,2000)});
@@ -281,12 +285,12 @@ $('djToggle').addEventListener('click',function(){follow=!follow;applyDj();rende
 // ---- review a set ----
 function loadHistory(text){
   api('/api/history',text).then(function(r){
-    reviewPairs=r.pairs;$('reviewInfo').textContent=r.songs+' songs, '+r.pairs.length+' mixes'+(r.songs-r.found?' · '+(r.songs-r.found)+' not in your show folders':'');
+    reviewPairs=r.pairs;$('reviewInfo').textContent=r.songs+' songs, '+r.pairs.length+' mixes'+(r.songs-r.found?' · '+(r.songs-r.found)+' not in your song list':'');
     renderPairs();
   }).catch(function(){$('reviewInfo').textContent='Could not read that file.'});
 }
 function isSaved(a,b){return links.some(function(l){return l.from===a&&l.to===b})}
-function side(p){return '<div><div class="t" style="font-weight:bold">'+esc(p.title)+'</div><div class="ar" style="color:#b4c2d7;font-size:13px">'+esc(p.artist)+'</div>'+(p.found?'':'<div class="nf">not in show folders</div>')+'</div>'}
+function side(p){return '<div><div class="t" style="font-weight:bold">'+esc(p.title)+'</div><div class="ar" style="color:#b4c2d7;font-size:13px">'+esc(p.artist)+'</div>'+(p.found?'':'<div class="nf">not in your song list</div>')+'</div>'}
 function renderPairs(){
   $('pairs').innerHTML=reviewPairs.map(function(p,i){var on=isSaved(p.from.id,p.to.id);return '<div class="pair">'+side(p.from)+'<div class="arrow">→</div>'+side(p.to)+'<button data-i="'+i+'" class="'+(on?'on':'')+'">'+(on?'✓ GOOD':'GOOD')+'</button></div>'}).join('');
 }
@@ -298,18 +302,18 @@ $('readPaste').addEventListener('click',function(){loadHistory($('paste').value)
 function showSet(i){
   var s=djSets[i]; reviewPairs=s.pairs;
   document.querySelectorAll('#sess button').forEach(function(b){b.classList.toggle('on',+b.dataset.i===i)});
-  $('reviewInfo').textContent=s.songs+' songs, '+s.pairs.length+' mixes'+(s.songs-s.found?' · '+(s.songs-s.found)+' not in your show folders':'');
+  $('reviewInfo').textContent=s.songs+' songs, '+s.pairs.length+' mixes'+(s.songs-s.found?' · '+(s.songs-s.found)+' not in your song list':'');
   renderPairs();
 }
 $('djaySets').addEventListener('click',function(){
-  $('reviewInfo').textContent='Reading djay…';
+  $('reviewInfo').textContent='Reading this Mac…';
   api('/api/djay/sessions').then(function(r){
     djSets=r.sessions.filter(function(s){return s.pairs.length});
-    if(!r.djay){$('sess').innerHTML='';$('reviewInfo').textContent="djay's library wasn't found on this Mac.";return}
-    if(!djSets.length){$('sess').innerHTML='';$('reviewInfo').textContent='No sets with mixes in djay on this Mac yet.';return}
+    if(!r.djay){$('sess').innerHTML='';$('reviewInfo').textContent="No djay or Traktor sets found on this Mac.";return}
+    if(!djSets.length){$('sess').innerHTML='';$('reviewInfo').textContent='No sets with mixes on this Mac yet.';return}
     $('sess').innerHTML=djSets.map(function(s,i){return '<button data-i="'+i+'">'+new Date(s.start*1000).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' · '+s.songs+' songs</button>'}).join('');
     showSet(0);
-  }).catch(function(){$('reviewInfo').textContent='Could not read djay.'});
+  }).catch(function(){$('reviewInfo').textContent='Could not read the sets.'});
 });
 $('sess').addEventListener('click',function(e){var b=e.target.closest('button');if(b)showSet(+b.dataset.i)});
 // ---- my mixes ----

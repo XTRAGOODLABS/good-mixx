@@ -3,6 +3,8 @@ Plugged into server.py; the stems/FX page and MIDI are untouched."""
 import csv, io, json, os, re, threading, time
 from pathlib import Path
 import djay_live
+import djay_screen
+import traktor_live
 
 BASE = Path(__file__).parent
 DATA = BASE / "data"
@@ -11,6 +13,8 @@ MIXES = DATA / "mixes.json"
 lock = threading.Lock()
 STEMS = True          # False when run from mixes_server.py (no stems page)
 _djay = djay_live.Djay()
+_traktor = traktor_live.Traktor()
+_screen = None   # started below, once _norm exists
 _index = {"mtime": None, "both": {}, "title": {}}
 
 
@@ -32,6 +36,18 @@ def _save(db):
     os.replace(tmp, MIXES)
 
 
+def _plays():
+    """Songs played in djay and Traktor on this Mac, oldest first."""
+    found, err = _djay.plays()
+    tk = _traktor.plays()
+    if tk:
+        found = sorted(found + tk, key=lambda p: p["start"])
+        err = ""
+    elif err and _traktor.connected():
+        err = ""
+    return found, err
+
+
 def _norm(s):
     s = (s or "").lower()
     s = re.sub(r"\((feat|ft|with)[^)]*\)|\bfeat\.?.*$|\bft\.?.*$", "", s)
@@ -39,8 +55,14 @@ def _norm(s):
     return re.sub(r"[^a-z0-9]+", "", s)
 
 
+_screen = djay_screen.ScreenKeys(_norm)
+
+
 def _library():
-    return json.loads(LIB.read_text()) if LIB.exists() else {"songs": []}
+    """Your show-folder song list; on a Mac without one, Traktor's own collection."""
+    if LIB.exists():
+        return json.loads(LIB.read_text())
+    return {"songs": [dict(s) for s in _traktor.songs()]}
 
 
 def _parse_history(text):
@@ -84,7 +106,11 @@ def _match(items):
 
 def _lookup():
     """Song list index, re-read only when library.json changes."""
-    mtime = LIB.stat().st_mtime if LIB.exists() else 0
+    if LIB.exists():
+        mtime = LIB.stat().st_mtime
+    else:
+        _traktor.songs()
+        mtime = ("traktor", _traktor.coll["mtime"])
     if _index["mtime"] != mtime:
         both, title = {}, {}
         for s in _library()["songs"]:
@@ -98,9 +124,12 @@ def _lookup():
 def _djay_keys():
     """djay's own key for each song it has analysed: by artist+title, and by title when only one key fits."""
     both, title = {}, {}
-    for t, a, key in _djay.keys():
+    for t, a, key in list(_djay.keys()) + _traktor.keys():
         both[_norm(a) + "|" + _norm(t)] = key
         title.setdefault(_norm(t), set()).add(key)
+    for t, a, key in _screen.all():          # keys djay showed on a deck but did not save
+        if both.setdefault(_norm(a) + "|" + _norm(t), key) == key:
+            title.setdefault(_norm(t), set()).add(key)
     return both, {t: next(iter(ks)) for t, ks in title.items() if len(ks) == 1}
 
 
@@ -121,15 +150,18 @@ def _djay_song(p):
     ix = _lookup()
     s = ix["both"].get(_norm(p["artist"]) + "|" + _norm(p["title"])) or ix["title"].get(_norm(p["title"]))
     if s:
-        return {"id": s["id"], "title": s["title"], "artist": s["artist"], "found": True, "key": p["djkey"] or s.get("key", "")}
+        return {"id": s["id"], "title": s["title"], "artist": s["artist"], "found": True,
+                "key": p["djkey"] or _screen.key_for(p["title"], p["artist"]) or s.get("key", "")}
     return {"id": "ext:" + (p["artist"] + " - " if p["artist"] else "") + p["title"], "title": p["title"],
-            "artist": p["artist"], "found": False, "bpm": p["bpm"] or "", "key": p["djkey"], "dj": True}
+            "artist": p["artist"], "found": False, "bpm": p["bpm"] or "",
+            "key": p["djkey"] or _screen.key_for(p["title"], p["artist"]), "dj": True}
 
 
 def _now():
     """What djay is playing right now on this Mac (left decks = A, right decks = B)."""
-    plays, err = _djay.plays()
+    plays, err = _plays()
     out = {"ok": True, "stems": STEMS, "djay": not err, "error": err, "live": False, "age": None,
+           "screen": _screen.status, "traktor": _traktor.connected(),
            "rev": "", "decks": {"A": None, "B": None}, "playing": None}
     if not plays:
         return out
@@ -138,6 +170,7 @@ def _now():
     out["live"] = out["age"] < djay_live.LIVE_WINDOW
     out["rev"] = newest["key"]
     out["playing"] = djay_live.side(newest["deck"])
+    out["source"] = "traktor" if str(newest["key"]).startswith("tk-") else "djay"
     for p in plays:
         if p["session"] == newest["session"]:
             out["decks"][djay_live.side(p["deck"])] = _djay_song(p)
@@ -146,7 +179,7 @@ def _now():
 
 def _sessions(limit=12):
     """Recent djay sets played on this Mac, newest first, with every mix in each."""
-    plays, err = _djay.plays()
+    plays, err = _plays()
     by = {}
     for p in plays:
         by.setdefault(p["session"], []).append(p)
@@ -177,7 +210,7 @@ def handle_get(h):
     if path in ("/mixes", "/mixes.html"):
         return _send(h, 200, (BASE / "mixes.html").read_bytes(), "text/html")
     if path == "/api/library":
-        return _send(h, 200, _library_with_djay_keys() if LIB.exists() else {"songs": []})
+        return _send(h, 200, _library_with_djay_keys())
     if path == "/api/links":
         with lock:
             return _send(h, 200, _load())
@@ -190,6 +223,14 @@ def handle_get(h):
 
 def handle_post(h):
     path = h.path.split("?")[0]
+    if path.startswith("/traktor/"):           # live deck info from the Traktor link add-on
+        try:
+            n = int(h.headers.get("Content-Length", 0))
+            msg = json.loads(h.rfile.read(n) or b"{}") if 0 < n < 200_000 else {}
+            _traktor.receive(path[len("/traktor/"):], msg if isinstance(msg, dict) else {})
+        except (ValueError, TypeError):
+            pass
+        return _send(h, 200, b"{}")
     if not path.startswith("/api/"):
         return False
     try:
