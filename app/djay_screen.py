@@ -66,7 +66,7 @@ class ScreenKeys:
         out = (r.stdout or "").strip()
         if r.returncode != 0:
             err = (r.stderr or "").lower()
-            if "assistive" in err or "not allowed" in err or "-1719" in err or "-25211" in err:
+            if any(x in err for x in ("assistive", "not allowed", "not authorized", "-1719", "-25211", "-1743", "-10004")):
                 return "no-permission", {}
             return "error", {}
         if out == "NOT_RUNNING":
