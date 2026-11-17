@@ -1,5 +1,5 @@
 GOOD MIXX  ·  Crate OS by XTRAGOODLABS
-Remembers your good mixes and suggests what to play next. Works with djay or Traktor Pro 3 on a Mac,
+Remembers your good mixes and suggests what to play next. Works with djay or Traktor Pro 4 / 3 on a Mac,
 with an iPad (or the Mac itself) as the screen.
 
 START
@@ -15,7 +15,7 @@ DJAY
 Just play in djay on this Mac. To read djay's keys, allow GOOD MIXX when asked
 (System Settings > Privacy & Security > Accessibility > GOOD MIXX).
 
-TRAKTOR PRO 3 (one time)
+TRAKTOR PRO 4 or 3 (one time)
 1. Quit Traktor. Double-click "Add Traktor Link" (keep it next to GOOD MIXX). Type your Mac password if asked.
    If it says it couldn't change Traktor's files: System Settings > Privacy & Security > App Management >
    turn on Terminal, quit Terminal (Command+Q), and double-click it again.

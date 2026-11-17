@@ -177,6 +177,21 @@ function api(path,body){
 }
 function song(id){return byId[id]||(id&&id.indexOf('ext:')===0?{id:id,title:id.slice(4),artist:'',bpm:'',key:'',ext:true}:null)}
 // ---- key + tempo matching (Camelot wheel) ----
+// Same song? Saved mixes are matched by title + artist, so a song still finds its mixes
+// if djay and Traktor spell it a little differently, or it was saved before it was in the song list.
+function nrm(s){s=String(s||'').toLowerCase();s=s.replace(/\((feat|ft|with)[^)]*\)|\bfeat\.?.*$|\bft\.?.*$/,'');s=s.replace(/\(.*?(edit|version|remaster|clean|radio|explicit|dirty).*?\)|\[.*?\]/g,'');return s.replace(/[^a-z0-9]+/g,'')}
+function sk(id){
+  var s=byId[id],a,t;
+  if(s){a=s.artist;t=s.title}
+  else if(id&&id.indexOf('ext:')===0){var r=id.slice(4),i=r.indexOf(' - ');if(i>=0){a=r.slice(0,i);t=r.slice(i+3)}else{a='';t=r}}
+  else return null;
+  return {full:nrm(a)+'|'+nrm(t),t:nrm(t),a:!!nrm(a)};
+}
+function same(x,y){
+  if(x===y)return true;
+  var a=sk(x),b=sk(y);if(!a||!b||!a.t||!b.t)return false;
+  return a.full===b.full||((!a.a||!b.a)&&a.t===b.t);
+}
 function camel(k){var m=/^(\d+)([AB])$/.exec(k||'');return m?{n:+m[1],l:m[2]}:null}
 function keyFit(a,b){
   var x=camel(a),y=camel(b); if(!x||!y)return null;
@@ -224,13 +239,18 @@ function renderNext(){
   var cur=song(deck[playing]);
   $('nextTitle').textContent=cur?"WHAT'S NEXT AFTER "+cur.title.toUpperCase():"WHAT'S NEXT — pick the song that's playing";
   if(!cur){$('proven').innerHTML='<div class="muted">Pick what\'s playing on Deck '+playing+'.</div>';$('matches').innerHTML='';return;}
-  var mine=links.filter(function(l){return l.from===cur.id}).sort(function(a,b){return b.count-a.count||b.last-a.last});
+  var seen={},mine=[];
+  links.filter(function(l){return same(l.from,cur.id)&&!same(l.to,cur.id)}).forEach(function(l){ // same song even if saved under another name/app
+    var k=(sk(l.to)||{}).full||l.to, m=seen[k];
+    if(m){m.count+=l.count;m.last=Math.max(m.last,l.last)}else{seen[k]=m={to:l.to,count:l.count,last:l.last};mine.push(m)}
+  });
+  mine.sort(function(a,b){return b.count-a.count||b.last-a.last});
   $('proven').innerHTML=mine.length?mine.map(function(l){var s=song(l.to);return s?rowHTML(s,'worked '+l.count+'×','proven'):''}).join(''):'<div class="muted">No saved mixes from this song yet.</div>';
   var taken={};mine.forEach(function(l){taken[l.to]=1});
   var out=[];
   if(cur.bpm){
     songs.forEach(function(s){
-      if(s.id===cur.id||taken[s.id])return;
+      if(s.id===cur.id||taken[s.id]||mine.some(function(l){return same(l.to,s.id)}))return;
       if(filter==='same'&&s.show!==cur.show)return;
       var g=bpmGap(cur.bpm,s.bpm); if(g===null||Math.abs(g)>6)return;
       if(filter==='up'&&g<0)return;

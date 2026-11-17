@@ -5,6 +5,14 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.0.2 — November 17, 2026
+
+- **Traktor Pro 4** support: Add / Remove / Check Traktor Link now find Traktor Pro 4 as well as 3. A Mac with
+  both gets both linked, each with its own backup of Traktor's original files.
+- Saved mixes show up again for the song that's playing even when the song comes in under a slightly different
+  name (a "(Clean)" or "feat." tag, a missing artist, djay vs Traktor spelling, or added to the song list later).
+  The same mix saved under two names shows once, with the counts added together.
+
 ## v1.0.1 — November 16, 2026
 
 - One Traktor link now feeds both the GOOD MIXX app and GOOD MIXX inside Crate OS (run Add Traktor Link once more).

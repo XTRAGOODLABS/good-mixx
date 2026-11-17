@@ -6,7 +6,7 @@
 
 ### Remember the blends that work. Know what to play next.
 
-A booth companion from **Crate OS by XTRA GOOD LABS** for **djay** and **Traktor Pro 3** on the Mac,
+A booth companion from **Crate OS by XTRA GOOD LABS** for **djay** and **Traktor Pro 4 or 3** on the Mac,
 with your iPad as the second screen. Original idea by **DJ Aquarobotics**.
 
 [![Checks](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml/badge.svg)](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml)
@@ -33,7 +33,7 @@ with your iPad as the second screen. Original idea by **DJ Aquarobotics**.
 
 - **djay:** its own library file on the Mac (read-only) and, for keys djay no longer saves, the title, artist
   and key text on each deck through macOS Accessibility. It never clicks or changes anything in djay.
-- **Traktor Pro 3:** a small add-on (the free traktor-api-client) that sends each deck's song, key, BPM and play
+- **Traktor Pro 4 / 3:** a small add-on (the free traktor-api-client) that sends each deck's song, key, BPM and play
   state to GOOD MIXX on the same Mac, plus Traktor's collection file (read-only).
 - Nothing leaves your Mac. No accounts, no internet needed.
 
