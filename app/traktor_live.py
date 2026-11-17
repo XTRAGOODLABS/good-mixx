@@ -12,7 +12,7 @@ from pathlib import Path
 import djay_screen
 
 BASE = Path(__file__).parent
-HIST = BASE / "data" / "traktor_history.json"
+HIST = Path(os.environ.get("GOODMIXX_DATA") or BASE / "data") / "traktor_history.json"
 NI_DOCS = Path.home() / "Documents" / "Native Instruments"
 NEW_SET_GAP = 3 * 3600          # a 3-hour break starts a new set
 
@@ -79,7 +79,7 @@ class Traktor:
                              "length": d.get("length", 0), "bpm": d["bpm"], "djkey": d["key"]})
         self.history = self.history[-5000:]
         try:
-            HIST.parent.mkdir(exist_ok=True)
+            HIST.parent.mkdir(parents=True, exist_ok=True)
             tmp = HIST.with_suffix(".tmp")
             tmp.write_text(json.dumps(self.history, ensure_ascii=False, indent=0))
             os.replace(tmp, HIST)

@@ -1,6 +1,8 @@
 """DJ Mixes on its own - no stems page, no MIDI, nothing to install.
 Run this on the Mac that is running djay, then open the address it prints on the iPad."""
+import os
 import socket
+import threading
 import time
 import sys
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -51,6 +53,8 @@ def main():
     if not name.endswith(".local"):
         name += ".local"
     ip = local_ip()
+    mixes.INFO.update(port=PORT, host=name, ip=ip,
+                      ipad="http://%s:%d/mixes" % (ip or name, PORT))
     now = mixes._now()
     print("")
     print("DJ MIXES IS RUNNING")
@@ -63,14 +67,17 @@ def main():
     print("  The iPad and this Mac need to be on the same Wi-Fi (a phone hotspot works).")
     print("  djay library: " + ("found" if not mixes._djay.plays()[1] else "not found (fine if you use Traktor)"))
     print("  Traktor: songs show up once Traktor is open with the Traktor link added")
-    time.sleep(4)
-    st = mixes._screen.status
-    print("  Reading keys from djay's screen: " + {
-        "on": "ON",
-        "djay-closed": "waiting for djay to open",
-        "no-permission": "OFF - give Terminal permission: System Settings > Privacy & Security > Accessibility,\n"
-                         "      turn on Terminal, then close this window and start again",
-        "off": "not available on this computer"}.get(st, "starting (" + st + ")"))
+    def screen_status():
+        time.sleep(4)
+        st = mixes._screen.status
+        who = "GOOD MIXX" if os.environ.get("GOODMIXX_DATA") else "Terminal"
+        print("  Reading keys from djay's screen: " + {
+            "on": "ON",
+            "djay-closed": "waiting for djay to open",
+            "no-permission": "OFF - System Settings > Privacy & Security > Accessibility > turn on " + who,
+            "off": "not available on this computer"}.get(st, "starting (" + st + ")"))
+        sys.stdout.flush()
+    threading.Thread(target=screen_status, daemon=True).start()
     print("")
     print("Keep this window open while you play. Close it to stop.")
     sys.stdout.flush()

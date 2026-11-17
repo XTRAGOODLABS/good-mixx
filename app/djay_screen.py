@@ -10,7 +10,7 @@ from pathlib import Path
 
 BASE = Path(__file__).parent
 SCRIPT = BASE / "tools" / "djay_deck_keys.js"
-STORE = BASE / "data" / "djay_screen_keys.json"
+STORE = Path(os.environ.get("GOODMIXX_DATA") or BASE / "data") / "djay_screen_keys.json"
 EVERY = 3.0
 
 MAJOR = ["B", "F#", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E"]
@@ -93,7 +93,7 @@ class ScreenKeys:
                 snap = dict(self.saved) if changed else None
             if snap is not None:
                 try:
-                    STORE.parent.mkdir(exist_ok=True)
+                    STORE.parent.mkdir(parents=True, exist_ok=True)
                     tmp = STORE.with_suffix(".tmp")
                     tmp.write_text(json.dumps(snap, ensure_ascii=False, indent=1))
                     os.replace(tmp, STORE)

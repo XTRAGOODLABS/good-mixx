@@ -7,7 +7,9 @@ import djay_screen
 import traktor_live
 
 BASE = Path(__file__).parent
-DATA = BASE / "data"
+DATA = Path(os.environ.get("GOODMIXX_DATA") or BASE / "data")   # the app keeps its data outside itself
+ASSETS = BASE / "assets"
+INFO = {}   # filled in by mixes_server.py (iPad address)
 LIB = DATA / "library.json"
 MIXES = DATA / "mixes.json"
 lock = threading.Lock()
@@ -28,7 +30,7 @@ def _load():
 
 
 def _save(db):
-    DATA.mkdir(exist_ok=True)
+    DATA.mkdir(parents=True, exist_ok=True)
     if MIXES.exists():
         (DATA / "mixes.backup.json").write_text(MIXES.read_text())
     tmp = MIXES.with_suffix(".tmp")
@@ -209,6 +211,22 @@ def handle_get(h):
     path = h.path.split("?")[0]
     if path in ("/mixes", "/mixes.html"):
         return _send(h, 200, (BASE / "mixes.html").read_bytes(), "text/html")
+    if path.startswith("/gm/assets/"):
+        name = path[len("/gm/assets/"):]
+        f = ASSETS / name
+        types = {".png": "image/png", ".woff2": "font/woff2"}
+        if "/" in name or ".." in name or not f.is_file() or f.suffix not in types:
+            return _send(h, 404, {"error": "not found"})
+        h.send_response(200)
+        h.send_header("Content-Type", types[f.suffix])
+        h.send_header("Cache-Control", "max-age=86400")
+        body = f.read_bytes()
+        h.send_header("Content-Length", str(len(body)))
+        h.end_headers()
+        h.wfile.write(body)
+        return True
+    if path == "/api/info":
+        return _send(h, 200, INFO)
     if path == "/api/library":
         return _send(h, 200, _library_with_djay_keys())
     if path == "/api/links":
@@ -231,6 +249,10 @@ def handle_post(h):
         except (ValueError, TypeError):
             pass
         return _send(h, 200, b"{}")
+    if path == "/api/quit" and h.client_address[0] in ("127.0.0.1", "::1"):
+        _send(h, 200, {"ok": True})              # only from this Mac, never from the iPad
+        threading.Timer(0.3, lambda: os._exit(0)).start()
+        return True
     if not path.startswith("/api/"):
         return False
     try:

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key><string>GOOD MIXX</string>
+	<key>CFBundleName</key><string>GOOD MIXX</string>
+	<key>CFBundleExecutable</key><string>GOOD MIXX</string>
+	<key>CFBundleIconFile</key><string>GOODMIXX</string>
+	<key>CFBundleIdentifier</key><string>com.xtragoodlabs.goodmixx</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>1.0.0</string>
+	<key>CFBundleVersion</key><string>1</string>
+	<key>LSMinimumSystemVersion</key><string>11.0</string>
+	<key>LSApplicationCategoryType</key><string>public.app-category.music</string>
+	<key>NSHumanReadableCopyright</key><string>Crate OS by XTRAGOODLABS</string>
+	<key>NSAppleEventsUsageDescription</key><string>GOOD MIXX reads the song title and key shown on djay's decks. It never clicks or changes anything.</string>
+</dict>
+</plist>

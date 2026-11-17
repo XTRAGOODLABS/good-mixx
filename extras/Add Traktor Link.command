@@ -1,7 +1,7 @@
 #!/bin/bash
-# Double-click to connect Traktor Pro 3 to DJ Mixes. Run it again after any Traktor update.
+# Double-click to connect Traktor Pro 3 to GOOD MIXX. Run it again after any Traktor update.
 # It adds two lines and a small "Api" folder to Traktor's own Kontrol D2 screen files, so Traktor
-# tells DJ Mixes what each deck is playing. Traktor's original files are backed up first.
+# tells GOOD MIXX what each deck is playing. Traktor's original files are backed up first.
 # To undo: double-click "Remove Traktor Link.command".
 cd "$(dirname "$0")" || exit 1
 HERE="$(pwd)"
@@ -78,7 +78,7 @@ if grep -q "ApiModule" "$CSI/D2/D2.qml" 2>/dev/null && [ -f "$CSI/D2/Api/ApiClie
   echo "  1. Open Traktor, then Preferences > Controller Manager"
   echo "  2. Under the Device list, click Add... > Traktor > Kontrol D2"
   echo "     (you don't need to own a D2 - this just switches the link on)"
-  echo "  3. Double-click Start DJ Mixes and load a song in Traktor."
+  echo "  3. Open GOOD MIXX and load a song in Traktor."
 else
   echo ""
   echo "Couldn't change Traktor's files. If macOS asked about Terminal changing apps, allow it:"
