@@ -27,5 +27,5 @@ You can switch between djay and Traktor any time - GOOD MIXX follows whichever p
 To stop: click QUIT in the GOOD MIXX window on the Mac.
 Your mixes are kept in: your user Library > Application Support > GOOD MIXX
 
-Idea: DJ Aquarobotics.
+Idea: DJ Aquarobotics. Thanks to ckryptickunal's djay-pro-mcp for inspiration.
 Credits: Traktor link based on traktor-api-client by Erik Minekus (MIT). Fonts: IBM Plex (OFL).

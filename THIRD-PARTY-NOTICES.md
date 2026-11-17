@@ -1,6 +1,7 @@
 # Third-party notices
 
 GOOD MIXX is based on an original idea by **DJ Aquarobotics**.
+Thanks to **ckryptickunal**'s djay-pro-mcp (https://github.com/ckryptickunal/djay-pro-mcp) for inspiration.
 
 **traktor-api-client** by Erik Minekus — MIT License. The files in `app/traktor-link/Api/` come from
 https://github.com/ErikMinekus/traktor-api-client; `ApiClient.js` is changed to send to GOOD MIXX

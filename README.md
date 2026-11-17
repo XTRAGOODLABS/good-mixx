@@ -50,7 +50,8 @@ Needs Python 3 (macOS developer tools include it). `GOODMIXX_DATA` sets where mi
 ## Credits
 
 **Idea: DJ Aquarobotics** — the original concept of a booth tool that remembers good mixes and suggests
-what to play next. Built by XTRA GOOD LABS with Claude. Traktor link based on
+what to play next. Built by XTRA GOOD LABS with Claude.
+Thanks to [djay-pro-mcp](https://github.com/ckryptickunal/djay-pro-mcp) by **ckryptickunal** for inspiration. Traktor link based on
 [traktor-api-client](https://github.com/ErikMinekus/traktor-api-client) by Erik Minekus (MIT).
 Fonts: IBM Plex (OFL). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 Project code is not yet under an open-source license; all rights reserved until one is chosen.
