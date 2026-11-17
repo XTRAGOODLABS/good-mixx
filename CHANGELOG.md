@@ -1,0 +1,44 @@
+# GOOD MIXX version history
+
+GOOD MIXX is based on an idea by **DJ Aquarobotics**: a booth tool that remembers which mixes worked and
+suggests what to play next. It began as a "Mixes" screen inside the Portal stems/FX companion, built with Claude in November 2026,
+and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
+backups; the Git history follows the same dates.
+
+## v1.0.0 — November 16, 2026 · GOOD MIXX
+
+- Standalone Mac app, **GOOD MIXX**, under Crate OS by XTRAGOODLABS. Opens its own window; the start screen
+  shows the address for the iPad. QUIT button on the Mac only (never from the iPad).
+- BeatDeck look: Crate OS crate on the left of the name in Impact, dark theme, orange accent,
+  IBM Plex Sans / Mono built in so it looks the same offline and on iPad.
+- App icon: GOOD over MIXX in white Impact on black with the Crate OS crate.
+- Data lives outside the app (`~/Library/Application Support/GOOD MIXX`), so updates never touch your mixes.
+- Traktor link helper now patches Traktor's own Kontrol D2 file instead of shipping a copy of it, backs up
+  the original first, and builds the change in a scratch folder before swapping it in.
+
+## v0.4 — November 16, 2026 · djay screen keys, Traktor Pro 3
+
+- djay stopped saving keys for newly analysed songs; GOOD MIXX now reads the key djay *shows* on each deck
+  (read-only, a few elements, every 3 seconds) and remembers it.
+- **Traktor Pro 3** support through traktor-api-client: live song, artist, key and BPM for all four decks,
+  history saved for after-set review, and the Traktor collection used as the song list when there is none.
+- Switch between djay and Traktor in the same set — GOOD MIXX follows whichever played last.
+- Keys show the way the DJ app shows them: Open Key (3m) on Traktor, Camelot (10A) on djay. Matching is unchanged.
+- Own address (port 8770) so it runs alongside Crate OS.
+
+## v0.3 — November 16, 2026 · key fallback
+
+- When djay has no key for a song, use the key from the song file's tags; prefer a library copy that has a key.
+
+## v0.2 — November 13, 2026 · follows djay on the Mac
+
+- Reads djay's own history on the Mac (read-only) so decks fill in by themselves; iPad as the second screen.
+- BPM and key from djay's analysis win over file tags.
+- After the gig: pick a set played on this Mac and tap GOOD on the mixes that worked.
+
+## v0.1 — November 8, 2026 · the Mixes screen
+
+- Two decks, a big GOOD MIX button and a swap button; search to pick songs by hand.
+- What's next: your proven mixes first, then BPM + Camelot key matches; same-show and energy-up filters.
+- Review a set from a djay playlist CSV or a pasted list. My Mixes list with undo.
+- Song list built from show folders by `tools/scan_library.py` (reads tags, never changes files).

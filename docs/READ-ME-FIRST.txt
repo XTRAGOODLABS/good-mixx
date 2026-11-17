@@ -1,0 +1,31 @@
+GOOD MIXX  ·  Crate OS by XTRAGOODLABS
+Remembers your good mixes and suggests what to play next. Works with djay or Traktor Pro 3 on a Mac,
+with an iPad (or the Mac itself) as the screen.
+
+START
+1. Drag GOOD MIXX into your Applications folder, then open it.
+   If your Mac says it can't check the app: right-click GOOD MIXX > Open > Open.
+   (On newer macOS: System Settings > Privacy & Security > scroll down > Open Anyway.)
+2. The first time, your Mac may ask to install Apple's free developer tools - click Install, then open GOOD MIXX again.
+3. A GOOD MIXX window opens. The start screen shows the address to type on your iPad
+   (iPad and Mac on the same Wi-Fi).
+4. Play. Tap GOOD MIX when two songs blend well. Suggestions show your proven mixes first, then BPM + key matches.
+
+DJAY
+Just play in djay on this Mac. To read djay's keys, allow GOOD MIXX when asked
+(System Settings > Privacy & Security > Accessibility > GOOD MIXX).
+
+TRAKTOR PRO 3 (one time)
+1. Quit Traktor. Double-click "Add Traktor Link" (keep it next to GOOD MIXX). Type your Mac password if asked.
+   If it says it couldn't change Traktor's files: System Settings > Privacy & Security > App Management >
+   turn on Terminal, quit Terminal (Command+Q), and double-click it again.
+2. Open Traktor > Preferences > Controller Manager > Add... > Traktor > Kontrol D2 (you don't need to own one).
+3. Open GOOD MIXX and play. Keys show the Traktor way (like 3m) while you're on Traktor.
+Undo any time with "Remove Traktor Link". Run "Add Traktor Link" again after Traktor updates.
+
+You can switch between djay and Traktor any time - GOOD MIXX follows whichever played last.
+To stop: click QUIT in the GOOD MIXX window on the Mac.
+Your mixes are kept in: your user Library > Application Support > GOOD MIXX
+
+Idea: DJ Aquarobotics.
+Credits: Traktor link based on traktor-api-client by Erik Minekus (MIT). Fonts: IBM Plex (OFL).
