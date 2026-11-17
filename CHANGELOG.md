@@ -5,6 +5,11 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.0.1 — November 16, 2026
+
+- One Traktor link now feeds both the GOOD MIXX app and GOOD MIXX inside Crate OS (run Add Traktor Link once more).
+- Other websites can't reach or post to GOOD MIXX on your Mac (DNS-rebinding and cross-site protection).
+
 ## v1.0.0 — November 16, 2026 · GOOD MIXX
 
 - Standalone Mac app, **GOOD MIXX**, under Crate OS by XTRAGOODLABS. Opens its own window; the start screen

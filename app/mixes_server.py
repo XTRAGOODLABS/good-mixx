@@ -1,5 +1,6 @@
 """DJ Mixes on its own - no stems page, no MIDI, nothing to install.
 Run this on the Mac that is running djay, then open the address it prints on the iPad."""
+import ipaddress
 import os
 import socket
 import threading
@@ -12,8 +13,39 @@ PORT = int(os.environ.get("GOODMIXX_PORT") or 8770)   # tests use a spare port
 mixes.STEMS = False
 
 
+def _host_name(value):
+    value = (value or "").strip().lower()
+    if value.startswith("["):
+        return value[1:].split("]")[0]
+    return value.rsplit(":", 1)[0] if ":" in value else value
+
+
+def _allowed_host(value):
+    """Only answer to this Mac's own names or IP addresses - blocks DNS-rebinding tricks by web pages."""
+    name = _host_name(value)
+    try:
+        ipaddress.ip_address(name)
+        return True
+    except ValueError:
+        pass
+    me = socket.gethostname().lower()
+    return name in ("localhost", me, me.split(".")[0], me.split(".")[0] + ".local")
+
+
 class Handler(BaseHTTPRequestHandler):
+    def _blocked(self, post=False):
+        origin = self.headers.get("Origin")
+        bad = not _allowed_host(self.headers.get("Host", ""))
+        # Another web page posting here is refused; the page itself and Traktor (no Origin) are fine.
+        if post and origin is not None:
+            bad = bad or origin.split("://", 1)[-1].lower() != self.headers.get("Host", "").strip().lower()
+        if bad:
+            self.send_error(403)
+        return bad
+
     def do_GET(self):
+        if self._blocked():
+            return
         if mixes.handle_get(self):
             return
         if self.path.split("?")[0] in ("/", "/index.html"):
@@ -24,6 +56,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
+        if self._blocked(post=True):
+            return
         if not mixes.handle_post(self):
             self.send_error(404)
 

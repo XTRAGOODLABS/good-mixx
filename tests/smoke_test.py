@@ -1,6 +1,6 @@
 """Starts GOOD MIXX with an empty data folder, plays two songs the way Traktor reports them,
 and checks the decks, keys, history and the iPad page. Run: python3 tests/smoke_test.py"""
-import json, os, socket, subprocess, sys, tempfile, time, urllib.request
+import json, os, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -53,6 +53,15 @@ def main():
         assert call("/gm/assets/gm-lockup.png")[:4] == b"\x89PNG"
         call("/api/links", {"from": now["decks"]["A"]["id"], "to": now["decks"]["B"]["id"]})
         assert call("/api/links")["links"][0]["count"] == 1
+        # other websites are refused; Traktor-style posts (no Origin) still work
+        for headers in ({"Host": "evil.example:%d" % PORT}, {"Origin": "https://evil.example"}):
+            req = urllib.request.Request("http://localhost:%d/api/links" % PORT, data=b'{"from":"a","to":"b"}',
+                                         headers=headers, method="POST")
+            try:
+                urllib.request.urlopen(req, timeout=5)
+                sys.exit("a request from another website was not blocked")
+            except urllib.error.HTTPError as e:
+                assert e.code == 403, e.code
         call("/api/quit", {})
         proc.wait(timeout=5)
         print("smoke test passed")
