@@ -2,7 +2,7 @@
 
 The source repository is XTRAGOODLABS/good-mixx. v1.0.0 is the first source release.
 
-1. Run `python3 tests/smoke_test.py` (quit GOOD MIXX first — the test uses its address).
+1. Run `python3 tests/smoke_test.py` (it uses a spare address, so GOOD MIXX can stay open).
 2. On a Mac, run `bash scripts/package-mac.sh`. It builds `dist/GOOD MIXX/` (app, Traktor link helpers,
    read-me, notices), `dist/GOOD-MIXX-<version>-macOS.zip` and `dist/SHA256SUMS.txt`. Only named files
    are copied into the app.

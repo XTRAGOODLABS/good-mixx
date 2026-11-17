@@ -4,7 +4,15 @@ import json, os, socket, subprocess, sys, tempfile, time, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PORT = 8770
+
+
+def _free_port():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+PORT = _free_port()   # never clashes with a running GOOD MIXX
 
 
 def call(path, data=None):
@@ -16,11 +24,8 @@ def call(path, data=None):
 
 
 def main():
-    with socket.socket() as s:
-        if s.connect_ex(("127.0.0.1", PORT)) == 0:
-            sys.exit("port %d is busy - quit GOOD MIXX first" % PORT)
     tmp = Path(tempfile.mkdtemp())
-    env = dict(os.environ, GOODMIXX_DATA=str(tmp / "data"), HOME=str(tmp / "home"), DJAY_LIBRARY=str(tmp / "none.db"))
+    env = dict(os.environ, GOODMIXX_PORT=str(PORT), GOODMIXX_DATA=str(tmp / "data"), HOME=str(tmp / "home"), DJAY_LIBRARY=str(tmp / "none.db"))
     proc = subprocess.Popen([sys.executable, "mixes_server.py"], cwd=ROOT / "app", env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     try:

@@ -8,7 +8,7 @@ import sys
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import mixes
 
-PORT = 8770
+PORT = int(os.environ.get("GOODMIXX_PORT") or 8770)   # tests use a spare port
 mixes.STEMS = False
 
 
