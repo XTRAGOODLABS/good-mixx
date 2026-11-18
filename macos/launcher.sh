@@ -26,8 +26,11 @@ fi
 export GOODMIXX_DATA
 mkdir -p "$GOODMIXX_DATA"
 
-# Already running? Just open the window.
-if curl -s -m 2 "http://localhost:$PORT/api/info" | grep -q '"ipad"'; then open_window; exit 0; fi
+# Already running? Just open the window - but only if it's this version. After an update the old
+# one is still running in the background, so it gets stopped and the new one starts instead.
+VERSION="$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Info.plist" 2>/dev/null)"
+RUNNING="$(curl -s -m 2 "http://localhost:$PORT/api/info")"
+if echo "$RUNNING" | grep -q '"ipad"' && echo "$RUNNING" | grep -q "\"version\": \"$VERSION\""; then open_window; exit 0; fi
 
 # An older DJ Mixes window holding the address is stopped (only ours).
 for pid in $(lsof -nP -t -iTCP:$PORT -sTCP:LISTEN 2>/dev/null); do

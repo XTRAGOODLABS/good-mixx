@@ -249,7 +249,10 @@ function $(id){return document.getElementById(id)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function api(path,body){
   var o=body===undefined?{}:{method:'POST',headers:{'Content-Type':typeof body==='string'?'text/plain':'application/json'},body:typeof body==='string'?body:JSON.stringify(body)};
-  return fetch(path,o).then(function(r){if(!r.ok)throw Error(r.status);return r.json()});
+  return fetch(path,o).then(function(r){
+    if(r.ok)return r.json();
+    return r.json().catch(function(){return {}}).then(function(j){var e=Error(j.error||r.status);e.status=r.status;throw e});
+  });
 }
 function song(id){return byId[id]||(id&&id.indexOf('ext:')===0?{id:id,title:id.slice(4),artist:'',bpm:'',key:'',ext:true}:null)}
 // ---- key + tempo matching (Camelot wheel) ----
@@ -470,7 +473,8 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
 (function(){
   if(!/^(localhost|127\.)/.test(location.hostname))return;
   $('studioTab').hidden=false;
-  var mix=null, plan=null, sets=[], saved=[], src='sets', sel=-1, planTimer=null, renderTimer=null, info={}, srcQ='';
+  var mix=null, plan=null, sets=[], saved=[], src='sets', sel=-1, planTimer=null, renderTimer=null, info={}, srcQ='', planErr='';
+  function why(e){return e&&e.status===404?'GOOD MIXX needs a restart to finish updating: click QUIT, then open GOOD MIXX again.':(e&&e.status?'Something went wrong: '+e.message:'Can\u2019t reach GOOD MIXX on this Mac. Is it still running?')}
   var BL={beat:'Beat-matched',set:'Set timing',fade:'Crossfade'};
   function blank(){return {id:'',name:'',blend:'beat',bars:16,fade:12,source:'',items:[]}}
   function who(it){return (it.artist?it.artist+' - ':'')+it.title}
@@ -495,7 +499,9 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
     readTop();
     if(!mix.items.length){plan=null;render();return}
     var mine=JSON.stringify(mix);
-    api('/api/studio/plan',{mix:mix,analyze:false}).then(function(p){if(JSON.stringify(mix)===mine){plan=p;render()}}).catch(function(){});
+    planErr='';
+    api('/api/studio/plan',{mix:mix,analyze:false}).then(function(p){if(JSON.stringify(mix)===mine){plan=p;render()}})
+      .catch(function(e){planErr=why(e);render()});
   }
   function fillSaved(){
     $('stSaved').innerHTML='<option value="">Saved studio mixes ('+saved.length+')…</option>'+saved.slice().sort(function(a,b){return (b.saved||0)-(a.saved||0)}).map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.name)+' · '+m.items.length+' songs</option>'}).join('');
@@ -543,7 +549,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
   function render(){
     var items=mix.items, P=plan&&plan.items&&plan.items.length===items.length?plan.items:null;
     var total=P?plan.total:0, found=P?P.filter(function(r){return r.path}).length:0;
-    $('stSum').innerHTML=items.length?'<span><b>'+items.length+'</b> songs</span>'+(P?'<span>length <b>'+clk(total)+'</b></span><span><b>'+found+'</b> of '+items.length+' found on this Mac</span>':'<span>working out the mix…</span>')+(info.ffmpeg===false?'<span style="color:#ff9b8a">building audio needs ffmpeg - SAVE PLAYLIST still works</span>':''):'<span>Add songs from a past set, your good mixes, or your song list.</span>';
+    $('stSum').innerHTML=items.length?'<span><b>'+items.length+'</b> songs</span>'+(P?'<span>length <b>'+clk(total)+'</b></span><span><b>'+found+'</b> of '+items.length+' found on this Mac</span>':planErr?'<span style="color:#ff9b8a">'+esc(planErr)+'</span> <button id="stRetry" style="min-height:30px;font-size:11px">TRY AGAIN</button>':'<span>finding your songs on this Mac…</span>')+(info.ffmpeg===false?'<span style="color:#ff9b8a">building audio needs ffmpeg - SAVE PLAYLIST still works</span>':''):'<span>Add songs from a past set, your good mixes, or your song list.</span>';
     // timeline
     var tl='';
     if(P&&total>0){
@@ -553,7 +559,8 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
         var fi=r.fade_in/r.dur*100,fo=r.fade_out/r.dur*100,bg=lane?'var(--accent-soft)':'var(--blue)';
         tl+='<div class="bar l'+lane+(i===sel?' sel':'')+'" data-i="'+i+'" title="'+esc(who(r))+'" style="left:'+(r.mix_start/total*100)+'%;width:'+Math.max(.3,r.dur/total*100)+'%;background:linear-gradient(90deg,rgba(0,0,0,.45) 0%,transparent '+fi+'%,transparent '+(100-fo)+'%,rgba(0,0,0,.45) 100%),'+bg+'">'+esc(r.title)+'</div>';lane=1-lane});
     }
-    $('stTimeline').innerHTML=tl||'<div class="muted" style="padding:34px 12px">The timeline shows here.</div>';
+    $('stTimeline').innerHTML=tl||'<div class="muted" style="padding:34px 12px">'+(items.length?'Your songs show here on a timeline once the mix is worked out.':'Your songs show here on a timeline.')+'</div>';
+    var rt=$('stRetry');if(rt)rt.addEventListener('click',refreshPlan);
     // rows
     $('stRows').innerHTML=items.map(function(it,i){
       var r=P?P[i]:null, st;
@@ -619,7 +626,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
     started=true;load(blank());
     Promise.all([api('/api/studio/info'),api('/api/studio/sets')]).then(function(r){
       info=r[0];saved=r[0].mixes;sets=r[1].sets;fillSaved();renderSrc();render();showStatus(info.render||{});
-    }).catch(function(){$('stSrc').innerHTML='<div class="muted">Could not reach GOOD MIXX.</div>'});
+    }).catch(function(e){$('stSrc').innerHTML='<div class="muted" style="color:#ff9b8a">'+esc(why(e))+'</div>';started=false});
   });
 })();
 // ---- start screen (like BeatDeck) ----

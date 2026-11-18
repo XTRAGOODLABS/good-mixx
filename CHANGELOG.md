@@ -5,6 +5,12 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.1.1 — November 18, 2026
+
+- After an update, opening GOOD MIXX now stops the old copy still running in the background and starts the new
+  one. Before, the old copy kept answering, so STUDIO showed but never worked out the mix.
+- STUDIO says what went wrong (with TRY AGAIN) instead of waiting forever.
+
 ## v1.1.0 — November 18, 2026 · STUDIO
 
 - New **STUDIO** tab in the Mac window: turn your good mixes into a finished mix, or recreate a set you played

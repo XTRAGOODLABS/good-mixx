@@ -273,6 +273,13 @@ def _studio_get(h, path):
 
 
 def _studio_post(h, path, raw):
+    try:
+        return _studio_post_inner(h, path, raw)
+    except Exception as e:                       # show the reason in the window instead of hanging
+        return _send(h, 500, {"error": "%s: %s" % (type(e).__name__, e)})
+
+
+def _studio_post_inner(h, path, raw):
     if not _local(h):
         return _send(h, 403, {"error": "STUDIO works in the GOOD MIXX window on the Mac"})
     msg = json.loads(raw or b"{}")
