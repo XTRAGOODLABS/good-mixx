@@ -6,3 +6,4 @@
 - Read past Traktor sets from Traktor's own History files, not only sets played while GOOD MIXX was open.
 - A signed, notarized Mac download so first launch doesn't need Open Anyway.
 - Export / import of saved mixes so DJs can share their proven blends.
+- STUDIO: drag-to-trim song starts and ends, play a blend preview before building, EQ / bass-swap blends.

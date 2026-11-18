@@ -226,6 +226,39 @@ class Djay:
                 pass
             return self.allkeys
 
+    def tid_for(self, title, artist=""):
+        """djay's id for a song it has played, matched by title (+ artist)."""
+        import studio
+        want_t, want_a = studio.norm(title), studio.norm(artist)
+        best = ""
+        for it in list(self.items.values()):
+            if studio.norm(it["title"]) == want_t and it["tid"]:
+                if not want_a or studio.norm(it["artist"]) == want_a:
+                    return it["tid"]
+                best = best or it["tid"]
+        return best
+
+    def file_for(self, tid):
+        """The audio file djay has for a song, if djay keeps it as a file on this Mac (not streaming)."""
+        import studio
+        if not tid or not self.path.exists():
+            return ""
+        try:
+            con = self._open()
+            try:
+                rows = con.execute("select data from database2 where key=? limit 20", (tid,)).fetchall()
+                rows += con.execute("select data from database2 where collection like '%ocation%' and "
+                                    "instr(data, ?) > 0 limit 20", (tid.encode(),)).fetchall()
+            finally:
+                con.close()
+        except sqlite3.Error:
+            return ""
+        for (data,) in rows:
+            for p in studio.paths_in(bytes(data)):
+                if os.path.isfile(p):
+                    return p
+        return ""
+
     def plays(self):
         """Every song djay has logged, oldest first."""
         with self.lock:

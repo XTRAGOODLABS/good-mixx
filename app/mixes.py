@@ -1,9 +1,10 @@
 """Mixes screen: remembers good transitions and serves the song list.
 Plugged into server.py; the stems/FX page and MIDI are untouched."""
-import csv, io, json, os, re, threading, time
+import csv, io, json, os, re, subprocess, threading, time
 from pathlib import Path
 import djay_live
 import djay_screen
+import studio
 import traktor_live
 
 BASE = Path(__file__).parent
@@ -18,6 +19,9 @@ _djay = djay_live.Djay()
 _traktor = traktor_live.Traktor()
 _screen = None   # started below, once _norm exists
 _index = {"mtime": None, "both": {}, "title": {}}
+STUDIO = DATA / "studio_mixes.json"
+_finder = studio.Finder(DATA, djay=_djay, traktor=_traktor, library=LIB.exists())
+_render = studio.Renderer()
 
 
 def _load():
@@ -195,6 +199,152 @@ def _sessions(limit=12):
     return {"djay": not err, "error": err, "sessions": out}
 
 
+# ---------------------------------------------------------------- STUDIO (Mac window only)
+def _local(h):
+    return h.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+
+
+def _studio_load():
+    try:
+        return json.loads(STUDIO.read_text())
+    except (OSError, ValueError):
+        return {"version": 1, "mixes": []}
+
+
+def _studio_save(db):
+    DATA.mkdir(parents=True, exist_ok=True)
+    tmp = STUDIO.with_suffix(".tmp")
+    tmp.write_text(json.dumps(db, ensure_ascii=False, indent=1))
+    os.replace(tmp, STUDIO)
+
+
+def _studio_sets(limit=30):
+    """Past sets played on this Mac (djay or Traktor), each with its songs in the order played."""
+    plays, err = _plays()
+    ix = _lookup()
+    by = {}
+    for p in plays:
+        by.setdefault(p["session"], []).append(p)
+    out = []
+    for sid, ps in sorted(by.items(), key=lambda kv: kv[1][0]["start"], reverse=True)[:limit]:
+        songs, last = [], None
+        for p in sorted(ps, key=lambda x: x["start"]):
+            if last and (_norm(last["title"]), _norm(last["artist"])) == (_norm(p["title"]), _norm(p["artist"])):
+                continue                            # the same song started twice in a row
+            last = p
+            s = _djay_song(p)
+            lib = ix["both"].get(_norm(p["artist"]) + "|" + _norm(p["title"])) or ix["title"].get(_norm(p["title"])) or {}
+            songs.append({"sid": s["id"], "title": p["title"], "artist": p["artist"], "key": s.get("key", ""),
+                          "bpm": p.get("bpm") or lib.get("bpm") or "", "length": p.get("length") or lib.get("length") or 0,
+                          "tid": p.get("tid", ""), "set_start": p["start"]})
+        out.append({"id": sid, "start": int(ps[0]["start"]), "end": int(ps[-1]["start"]), "songs": songs,
+                    "app": "Traktor" if str(ps[0]["key"]).startswith("tk-") else "djay"})
+    return {"error": err, "sets": out}
+
+
+def _studio_info():
+    return {"ffmpeg": bool(studio.ffmpeg()), "out": str(studio.OUT_DIR), "mixes": _studio_load()["mixes"],
+            "render": _render.status}
+
+
+def _clean_mix(m):
+    items = []
+    for it in (m.get("items") or [])[:400]:
+        if not isinstance(it, dict) or not it.get("title"):
+            continue
+        items.append({k: it.get(k) for k in ("sid", "title", "artist", "bpm", "key", "length", "tid", "set_start",
+                                             "blend", "cut_in", "cut_out") if it.get(k) not in (None, "")})
+    blend = m.get("blend") if m.get("blend") in ("beat", "set", "fade") else "beat"
+    return {"id": str(m.get("id") or "")[:40], "name": str(m.get("name") or "New mix")[:80], "blend": blend,
+            "bars": int(m.get("bars") or 16), "fade": float(m.get("fade") or 12), "source": str(m.get("source") or "")[:80],
+            "items": items}
+
+
+def _studio_get(h, path):
+    if not _local(h):
+        return _send(h, 403, {"error": "STUDIO works in the GOOD MIXX window on the Mac"})
+    if path == "/api/studio/info":
+        return _send(h, 200, _studio_info())
+    if path == "/api/studio/sets":
+        return _send(h, 200, _studio_sets())
+    if path == "/api/studio/render":
+        return _send(h, 200, _render.status)
+    return _send(h, 404, {"error": "unknown"})
+
+
+def _studio_post(h, path, raw):
+    if not _local(h):
+        return _send(h, 403, {"error": "STUDIO works in the GOOD MIXX window on the Mac"})
+    msg = json.loads(raw or b"{}")
+    if path == "/api/studio/save":
+        mix = _clean_mix(msg.get("mix") or {})
+        with lock:
+            db = _studio_load()
+            if not mix["id"]:
+                mix["id"] = "m%d" % (time.time() * 1000)
+            mix["saved"] = int(time.time())
+            db["mixes"] = [x for x in db["mixes"] if x.get("id") != mix["id"]] + [mix]
+            _studio_save(db)
+        return _send(h, 200, {"mix": mix, "mixes": db["mixes"]})
+    if path == "/api/studio/delete":
+        with lock:
+            db = _studio_load()
+            db["mixes"] = [x for x in db["mixes"] if x.get("id") != msg.get("id")]
+            _studio_save(db)
+        return _send(h, 200, {"mixes": db["mixes"]})
+    if path == "/api/studio/plan":
+        return _send(h, 200, studio.plan(_clean_mix(msg.get("mix") or {}), _finder, analyze=bool(msg.get("analyze", True))))
+    if path == "/api/studio/render":
+        mix = _clean_mix(msg.get("mix") or {})
+        fmt = "wav" if msg.get("format") == "wav" else "mp3"
+        if not studio.ffmpeg():
+            return _send(h, 200, {"state": "error", "msg": "Building the audio needs ffmpeg (free). See the read-me."})
+        p = studio.plan(mix, _finder, analyze=True)
+        if not p["playable"]:
+            return _send(h, 200, {"state": "error", "msg": "None of these songs were found as files on this Mac."})
+        if not _render.start(p, mix["name"], fmt):
+            return _send(h, 200, {"state": "error", "msg": "Already building a mix - wait for it to finish."})
+        return _send(h, 200, _render.status)
+    if path == "/api/studio/cancel":
+        _render.cancel()
+        return _send(h, 200, _render.status)
+    if path == "/api/studio/export":
+        mix = _clean_mix(msg.get("mix") or {})
+        p = studio.plan(mix, _finder, analyze=False)
+        studio.OUT_DIR.mkdir(parents=True, exist_ok=True)
+        base = studio.safe_name(mix["name"])
+        m3u = studio.unique(studio.OUT_DIR / (base + ".m3u8"))
+        m3u.write_text(studio.playlist(p, mix["name"]))
+        txt = m3u.with_name(m3u.stem + " - tracklist.txt")
+        txt.write_text(studio.tracklist(p, mix["name"]))
+        return _send(h, 200, {"playlist": str(m3u), "tracklist": str(txt),
+                              "found": sum(1 for r in p["items"] if r.get("path")), "songs": len(p["items"])})
+    if path == "/api/studio/choose":
+        item = msg.get("item") or {}
+        who = ((item.get("artist") or "") + " - " if item.get("artist") else "") + (item.get("title") or "this song")
+        script = ('tell me to activate\nPOSIX path of (choose file with prompt "Find the music file for %s" '
+                  'of type {"public.audio"})' % who.replace("\\", "").replace('"', "'")[:120])
+        try:
+            r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=600)
+            chosen = r.stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            chosen = ""
+        if chosen and os.path.isfile(chosen):
+            _finder.remember(item, chosen)
+            return _send(h, 200, {"path": chosen})
+        return _send(h, 200, {"path": ""})
+    if path == "/api/studio/reveal":
+        p = str(msg.get("path") or "")
+        if p and os.path.isfile(p) and (p.startswith(str(studio.OUT_DIR)) or p.lower().endswith(studio.AUDIO_EXT)):
+            try:
+                subprocess.run(["open", "-R", p], timeout=10)
+            except (OSError, subprocess.SubprocessError):
+                pass
+            return _send(h, 200, {"ok": True})
+        return _send(h, 404, {"error": "not found"})
+    return _send(h, 404, {"error": "unknown"})
+
+
 def _send(h, code, body=b"", ctype="application/json"):
     if isinstance(body, (dict, list)):
         body = json.dumps(body, ensure_ascii=False).encode()
@@ -236,6 +386,8 @@ def handle_get(h):
         return _send(h, 200, _now())
     if path == "/api/djay/sessions":
         return _send(h, 200, _sessions())
+    if path.startswith("/api/studio/"):
+        return _studio_get(h, path)
     return False
 
 
@@ -260,6 +412,8 @@ def handle_post(h):
         if length > 3_000_000:
             return _send(h, 413, {"error": "too big"})
         raw = h.rfile.read(length)
+        if path.startswith("/api/studio/"):
+            return _studio_post(h, path, raw)
         if path == "/api/history":
             items = _parse_history(raw.decode("utf-8", "replace"))
             played = _match(items)

@@ -5,6 +5,18 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.1.0 — November 18, 2026 · STUDIO
+
+- New **STUDIO** tab in the Mac window: turn your good mixes into a finished mix, or recreate a set you played
+  in djay or Traktor on this Mac.
+- Three blend styles, for the whole mix or song by song: **beat-matched** (tempo matched without changing pitch,
+  beats lined up by listening for the kick, blended over 8/16/32 bars), **your set's timing**, or a **simple crossfade**.
+- **BUILD MP3 / WAV** with a timed tracklist, and **SAVE PLAYLIST** (.m3u8 + tracklist), saved to `Music/GOOD MIXX`.
+- Finds each song's file through djay, Traktor, the song list and Spotlight, or by hand with **FIND**.
+  Songs that aren't files on the Mac (streaming) stay in the playlist and are left out of the audio.
+- Mixes are saved and can be reopened, edited and rebuilt. STUDIO only answers on the Mac, never from the iPad.
+- Needs ffmpeg to build audio (`brew install ffmpeg`); playlists work without it.
+
 ## v1.0.2 — November 17, 2026
 
 - **Traktor Pro 4** support: Add / Remove / Check Traktor Link now find Traktor Pro 4 as well as 3. A Mac with
