@@ -9,7 +9,14 @@ APP="$OUT/GOOD MIXX.app/Contents"
 rm -rf "$ROOT/dist"
 mkdir -p "$APP/MacOS" "$APP/Resources/app/assets" "$APP/Resources/app/tools" "$APP/Resources/app/traktor-link/Api"
 cp "$ROOT/macos/Info.plist" "$APP/Info.plist"
-cp "$ROOT/macos/launcher.sh" "$APP/MacOS/GOOD MIXX"
+# The Mac app window (built on a Mac: see .github/workflows/ci.yml). Without it, GOOD MIXX opens in a browser window.
+if [ -n "${GM_NATIVE:-}" ] && [ -x "$GM_NATIVE" ]; then
+  cp "$GM_NATIVE" "$APP/MacOS/GOOD MIXX"
+  echo "Using the Mac app window: $GM_NATIVE"
+else
+  cp "$ROOT/macos/launcher.sh" "$APP/MacOS/GOOD MIXX"
+fi
+cp "$ROOT/macos/launcher.sh" "$APP/Resources/start-server.sh"
 cp "$ROOT/macos/GOODMIXX.icns" "$APP/Resources/GOODMIXX.icns"
 for f in mixes.py mixes_server.py djay_live.py djay_screen.py traktor_live.py studio.py mixes.html; do cp "$ROOT/app/$f" "$APP/Resources/app/"; done
 cp "$ROOT"/app/assets/*.woff2 "$ROOT"/app/assets/*.png "$ROOT/app/assets/OFL-IBM-Plex.txt" "$APP/Resources/app/assets/"

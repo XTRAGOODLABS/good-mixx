@@ -5,6 +5,15 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.2.0 — November 18, 2026 · Own window, song waves, blend previews
+
+- **GOOD MIXX is a real Mac app now:** its own window and menus (copy/paste, zoom, full screen), no browser.
+  Built by GitHub on a Mac for every change, for Apple silicon and Intel. Quitting GOOD MIXX stops it, iPad screen included.
+- **STUDIO song waves:** each song's wave drawn on the timeline, with its fades, plus zoom in / out / fit.
+- **▶ BLEND** builds and plays just one blend (same beat-matching as the full mix) with a moving playhead.
+  **▶ PLAY** plays a finished mix; click the timeline to jump.
+- Audio is served with byte ranges so it plays and seeks in Safari and the Mac app.
+
 ## v1.1.1 — November 18, 2026
 
 - After an update, opening GOOD MIXX now stops the old copy still running in the background and starts the new

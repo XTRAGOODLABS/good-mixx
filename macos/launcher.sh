@@ -10,6 +10,7 @@ mkdir -p "$HOME/Library/Logs"
 say_box() { osascript -e "display dialog \"$1\" with title \"GOOD MIXX\" buttons {\"OK\"} default button 1 with icon note" >/dev/null 2>&1; }
 
 open_window() {
+  [ -n "$GM_NO_WINDOW" ] && return   # the GOOD MIXX app shows its own window
   for b in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" \
            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"; do
@@ -60,4 +61,9 @@ for i in $(seq 1 40); do
   curl -s -m 1 "http://localhost:$PORT/api/info" | grep -q '"ipad"' && break
   sleep 0.25
 done
+if ! curl -s -m 2 "http://localhost:$PORT/api/info" | grep -q '"ipad"'; then
+  say_box "GOOD MIXX didn't start. Details are in your user Library > Logs > GOOD MIXX.log"
+  exit 1
+fi
 open_window
+exit 0
