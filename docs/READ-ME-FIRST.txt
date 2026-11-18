@@ -1,5 +1,5 @@
 GOOD MIXX  ·  Crate OS by XTRAGOODLABS
-Remembers your good mixes and suggests what to play next. Works with djay or Traktor Pro 3 on a Mac,
+Remembers your good mixes and suggests what to play next. Works with djay or Traktor Pro 4 / 3 on a Mac,
 with an iPad (or the Mac itself) as the screen.
 
 START
@@ -15,13 +15,23 @@ DJAY
 Just play in djay on this Mac. To read djay's keys, allow GOOD MIXX when asked
 (System Settings > Privacy & Security > Accessibility > GOOD MIXX).
 
-TRAKTOR PRO 3 (one time)
+TRAKTOR PRO 4 or 3 (one time)
 1. Quit Traktor. Double-click "Add Traktor Link" (keep it next to GOOD MIXX). Type your Mac password if asked.
    If it says it couldn't change Traktor's files: System Settings > Privacy & Security > App Management >
    turn on Terminal, quit Terminal (Command+Q), and double-click it again.
 2. Open Traktor > Preferences > Controller Manager > Add... > Traktor > Kontrol D2 (you don't need to own one).
 3. Open GOOD MIXX and play. Keys show the Traktor way (like 3m) while you're on Traktor.
 Undo any time with "Remove Traktor Link". Run "Add Traktor Link" again after Traktor updates.
+
+STUDIO (in the GOOD MIXX window on the Mac)
+Make a finished mix from your good mixes, or recreate a set you played on this Mac.
+- PAST SETS > RECREATE THIS SET, or add songs from MY MIXES / SONGS.
+- Pick how songs blend: Beat-matched, Set timing (like you played it) or Crossfade - for the whole mix or per song.
+- BUILD MP3 / BUILD WAV saves the mix and a tracklist to your Music > GOOD MIXX folder.
+  SAVE PLAYLIST saves a playlist (.m3u8) + tracklist you can load in your DJ app.
+- Only songs saved as files on this Mac go into the audio (streamed songs are left out). FIND lets you point to a file.
+- Building audio needs the free tool ffmpeg. If you have Homebrew: open Terminal and type  brew install ffmpeg
+  Playlists work without it.
 
 You can switch between djay and Traktor any time - GOOD MIXX follows whichever played last.
 To stop: click QUIT in the GOOD MIXX window on the Mac.

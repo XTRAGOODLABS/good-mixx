@@ -1,4 +1,4 @@
-"""Follows what Traktor Pro 3 is playing, using the small 'Traktor link' add-on (traktor-link/D2).
+"""Follows what Traktor Pro 4 / 3 is playing, using the small 'Traktor link' add-on (traktor-link/D2).
 
 Traktor sends each deck's song, artist, key, BPM and play/stop to DJ Mixes on this Mac
 (http://localhost:8770/traktor/...). Every song you start is saved to data/traktor_history.json,

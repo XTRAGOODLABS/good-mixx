@@ -9,9 +9,12 @@
 
 **djay:** allow GOOD MIXX in System Settings → Privacy & Security → **Accessibility** so it can read the key djay shows.
 
-**Traktor Pro 3:** quit Traktor, double-click **Add Traktor Link** (keep it next to the app), then in Traktor add
+**Traktor Pro 4 or 3:** quit Traktor, double-click **Add Traktor Link** (keep it next to the app), then in Traktor add
 Preferences → Controller Manager → Add… → Traktor → **Kontrol D2**. If the helper can't change Traktor's files,
 turn on Terminal under System Settings → Privacy & Security → **App Management**, quit Terminal and try again.
 **Remove Traktor Link** puts Traktor back exactly as it was.
+
+**STUDIO (optional):** building a finished MP3/WAV mix needs the free **ffmpeg**. With Homebrew, run
+`brew install ffmpeg` in Terminal. Saving playlists works without it.
 
 Your mixes live in `~/Library/Application Support/GOOD MIXX`. Click **QUIT** in the Mac window to stop.

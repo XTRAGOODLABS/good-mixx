@@ -98,6 +98,51 @@ textarea{width:100%;min-height:90px;font-size:14px}
 #launch .ipad{position:absolute;top:24px;font:500 12px var(--font-mono);color:var(--muted);letter-spacing:.06em;text-align:center}
 #launch .ipad b{color:#fff;font-weight:600}
 footer{padding:6px 14px 10px;font:500 9px var(--font-mono);letter-spacing:.14em;color:#4c525e;text-align:right;text-transform:uppercase}
+/* ---- STUDIO (Mac window) ---- */
+.st-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.st-top input[type=text]{flex:1;min-width:220px;font:600 16px var(--font-body);padding:10px 12px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+.st-top input[type=text]:focus{outline:none;border-color:var(--accent)}
+select{font:600 13px var(--font-body);min-height:44px;padding:0 10px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel-2);color:var(--fg)}
+.st-lbl{font:600 10px var(--font-mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.st-grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:12px;align-items:start}
+.st-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+.st-src{max-height:calc(100vh - 230px);overflow:auto}
+.st-src .row{min-height:48px}
+.st-src .row .t{font-size:14px}
+.st-set{background:var(--rack);border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;margin-bottom:6px}
+.st-set .d{font-weight:600}
+.st-set .s{color:var(--muted);font-size:12px;margin:2px 0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-set button{min-height:36px;font-size:12px;padding:0 10px}
+.st-sum{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font:500 12px var(--font-mono);color:var(--muted);margin-bottom:8px}
+.st-sum b{color:var(--fg)}
+#stTimeline{position:relative;height:92px;background:var(--rack);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:10px}
+#stTimeline .bar{position:absolute;height:30px;border-radius:5px;padding:0 6px;font:600 11px var(--font-body);color:#0d1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:30px;cursor:pointer}
+#stTimeline .bar.l0{top:8px;background:var(--blue)}
+#stTimeline .bar.l1{top:42px;background:var(--accent-soft)}
+#stTimeline .bar.sel{outline:2px solid #fff}
+#stTimeline .tick{position:absolute;bottom:2px;font:500 9px var(--font-mono);color:var(--muted);border-left:1px solid var(--line);padding-left:3px;height:14px}
+.st-row{display:grid;grid-template-columns:28px minmax(0,1fr) 120px 170px 140px 64px 116px;gap:8px;align-items:center;background:var(--rack);border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px;margin-bottom:5px;min-height:54px}
+.st-row.sel{border-color:var(--accent)}
+.st-row.skip{opacity:.55}
+.st-row .n{font:600 12px var(--font-mono);color:var(--muted);text-align:center}
+.st-row .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-row .ar{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-row .m{font:500 12px var(--font-mono)}
+.st-row select{min-height:36px;font-size:12px;width:100%}
+.st-row .ok{color:var(--green);font:600 11px var(--font-mono)}
+.st-row .nf{color:#ff9b8a;font:600 11px var(--font-mono)}
+.st-row .nf button{min-height:30px;font-size:11px;padding:0 8px;margin-left:4px}
+.st-row .at{font:500 12px var(--font-mono);color:var(--accent-soft);text-align:right}
+.st-row .ctl{display:flex;gap:4px;justify-content:flex-end}
+.st-row .ctl button{min-height:34px;min-width:34px;padding:0 8px}
+.st-row .w{grid-column:2/-1;font:500 10px var(--font-mono);color:#ff9b8a}
+.st-act{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.st-act .go{background:var(--accent);color:#16110c;border-color:var(--accent)}
+#stProg{flex:1;min-width:200px;height:10px;background:var(--rack);border:1px solid var(--line);border-radius:5px;overflow:hidden;display:none}
+#stProg div{height:100%;width:0;background:var(--accent);transition:width .4s}
+#stMsg{font-size:13px;color:var(--muted)}
+#stMsg b{color:var(--fg)}
+@media(max-width:1100px){.st-grid{grid-template-columns:minmax(0,1fr)}.st-row{grid-template-columns:28px minmax(0,1fr) 100px 120px;}.st-row .at,.st-row .ctl{grid-column:auto}}
 @media(max-width:800px){.decks{grid-template-columns:minmax(0,1fr)}.middle{flex-direction:row}.middle>*{flex:1}#good{min-height:70px}.cols{grid-template-columns:minmax(0,1fr)}.pair{grid-template-columns:1fr}.pair .arrow{display:none}.brand-sub{display:none}}
 </style>
 </head>
@@ -108,6 +153,7 @@ footer{padding:6px 14px 10px;font:500 9px var(--font-mono);letter-spacing:.14em;
 <button class="tab on" data-v="live">LIVE</button>
 <button class="tab" data-v="review">REVIEW A SET</button>
 <button class="tab" data-v="saved">MY MIXES</button>
+<button class="tab" data-v="studio" id="studioTab" hidden>STUDIO</button>
 </div>
 <a href="/" id="stemsLink">STEMS + FX →</a><button id="quitBtn" hidden title="Stop GOOD MIXX on this Mac">QUIT</button>
 </header>
@@ -154,6 +200,36 @@ footer{padding:6px 14px 10px;font:500 9px var(--font-mono);letter-spacing:.14em;
 <div id="saved"></div>
 </section>
 
+<section class="view" id="v-studio">
+<div class="st-top">
+  <input type="text" id="stName" placeholder="Name this mix" maxlength="80">
+  <span class="st-lbl">Blends</span>
+  <select id="stBlend" title="How songs blend, unless a song says otherwise">
+    <option value="beat">Beat-matched</option><option value="set">My set's timing</option><option value="fade">Simple crossfade</option>
+  </select>
+  <select id="stBars" title="How long beat-matched blends last"><option value="8">8 bars</option><option value="16" selected>16 bars</option><option value="32">32 bars</option></select>
+  <select id="stFade" title="How long crossfades last"><option value="6">6 sec fade</option><option value="12" selected>12 sec fade</option><option value="20">20 sec fade</option><option value="30">30 sec fade</option></select>
+  <select id="stSaved"><option value="">Saved studio mixes…</option></select>
+  <button id="stNew">NEW</button><button id="stSave">SAVE</button><button id="stDel">DELETE</button>
+</div>
+<div class="st-grid">
+  <div class="st-panel">
+    <div class="filters" style="margin-bottom:8px"><button class="stSrc on" data-s="sets">PAST SETS</button><button class="stSrc" data-s="mixes">MY MIXES</button><button class="stSrc" data-s="songs">SONGS</button></div>
+    <div class="st-src" id="stSrc"></div>
+  </div>
+  <div class="st-panel">
+    <div class="st-sum" id="stSum"></div>
+    <div id="stTimeline"></div>
+    <div id="stRows"></div>
+    <div class="st-act">
+      <button class="go" id="stMp3">BUILD MP3</button><button id="stWav">BUILD WAV</button><button id="stM3u">SAVE PLAYLIST</button>
+      <div id="stProg"><div></div></div><button id="stCancel" style="display:none">CANCEL</button>
+      <span id="stMsg"></span>
+    </div>
+  </div>
+</div>
+</section>
+
 <div id="sheet"><div class="top"><input type="search" id="q" placeholder="Search songs or artists" autocomplete="off"><button id="close" style="padding:0 18px">CLOSE</button></div><div id="results"></div></div>
 <footer>GOOD MIXX · Crate OS</footer>
 <div id="launch" hidden><div class="ipad" id="launchIpad"></div><img src="/gm/assets/gm-lockup-big.png" alt="Crate OS — GOOD MIXX"><div class="go"><span>Ready when you are</span><button id="launchGo">Open GOOD MIXX</button></div></div>
@@ -177,6 +253,21 @@ function api(path,body){
 }
 function song(id){return byId[id]||(id&&id.indexOf('ext:')===0?{id:id,title:id.slice(4),artist:'',bpm:'',key:'',ext:true}:null)}
 // ---- key + tempo matching (Camelot wheel) ----
+// Same song? Saved mixes are matched by title + artist, so a song still finds its mixes
+// if djay and Traktor spell it a little differently, or it was saved before it was in the song list.
+function nrm(s){s=String(s||'').toLowerCase();s=s.replace(/\((feat|ft|with)[^)]*\)|\bfeat\.?.*$|\bft\.?.*$/,'');s=s.replace(/\(.*?(edit|version|remaster|clean|radio|explicit|dirty).*?\)|\[.*?\]/g,'');return s.replace(/[^a-z0-9]+/g,'')}
+function sk(id){
+  var s=byId[id],a,t;
+  if(s){a=s.artist;t=s.title}
+  else if(id&&id.indexOf('ext:')===0){var r=id.slice(4),i=r.indexOf(' - ');if(i>=0){a=r.slice(0,i);t=r.slice(i+3)}else{a='';t=r}}
+  else return null;
+  return {full:nrm(a)+'|'+nrm(t),t:nrm(t),a:!!nrm(a)};
+}
+function same(x,y){
+  if(x===y)return true;
+  var a=sk(x),b=sk(y);if(!a||!b||!a.t||!b.t)return false;
+  return a.full===b.full||((!a.a||!b.a)&&a.t===b.t);
+}
 function camel(k){var m=/^(\d+)([AB])$/.exec(k||'');return m?{n:+m[1],l:m[2]}:null}
 function keyFit(a,b){
   var x=camel(a),y=camel(b); if(!x||!y)return null;
@@ -224,13 +315,18 @@ function renderNext(){
   var cur=song(deck[playing]);
   $('nextTitle').textContent=cur?"WHAT'S NEXT AFTER "+cur.title.toUpperCase():"WHAT'S NEXT — pick the song that's playing";
   if(!cur){$('proven').innerHTML='<div class="muted">Pick what\'s playing on Deck '+playing+'.</div>';$('matches').innerHTML='';return;}
-  var mine=links.filter(function(l){return l.from===cur.id}).sort(function(a,b){return b.count-a.count||b.last-a.last});
+  var seen={},mine=[];
+  links.filter(function(l){return same(l.from,cur.id)&&!same(l.to,cur.id)}).forEach(function(l){ // same song even if saved under another name/app
+    var k=(sk(l.to)||{}).full||l.to, m=seen[k];
+    if(m){m.count+=l.count;m.last=Math.max(m.last,l.last)}else{seen[k]=m={to:l.to,count:l.count,last:l.last};mine.push(m)}
+  });
+  mine.sort(function(a,b){return b.count-a.count||b.last-a.last});
   $('proven').innerHTML=mine.length?mine.map(function(l){var s=song(l.to);return s?rowHTML(s,'worked '+l.count+'×','proven'):''}).join(''):'<div class="muted">No saved mixes from this song yet.</div>';
   var taken={};mine.forEach(function(l){taken[l.to]=1});
   var out=[];
   if(cur.bpm){
     songs.forEach(function(s){
-      if(s.id===cur.id||taken[s.id])return;
+      if(s.id===cur.id||taken[s.id]||mine.some(function(l){return same(l.to,s.id)}))return;
       if(filter==='same'&&s.show!==cur.show)return;
       var g=bpmGap(cur.bpm,s.bpm); if(g===null||Math.abs(g)>6)return;
       if(filter==='up'&&g<0)return;
@@ -368,6 +464,162 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
     fetch('/api/quit',{method:'POST'}).finally(function(){
       document.body.innerHTML='<div style="height:100vh;display:flex;align-items:center;justify-content:center;background:#000;color:#8a8f9c;font:500 13px IBM Plex Mono,monospace;letter-spacing:.1em">GOOD MIXX IS STOPPED. YOU CAN CLOSE THIS WINDOW.</div>';
     });
+  });
+})();
+// ---- STUDIO: build a mix from good mixes or a past set (Mac window only) ----
+(function(){
+  if(!/^(localhost|127\.)/.test(location.hostname))return;
+  $('studioTab').hidden=false;
+  var mix=null, plan=null, sets=[], saved=[], src='sets', sel=-1, planTimer=null, renderTimer=null, info={}, srcQ='';
+  var BL={beat:'Beat-matched',set:'Set timing',fade:'Crossfade'};
+  function blank(){return {id:'',name:'',blend:'beat',bars:16,fade:12,source:'',items:[]}}
+  function who(it){return (it.artist?it.artist+' - ':'')+it.title}
+  function clk(t){t=Math.max(0,Math.round(t||0));var h=Math.floor(t/3600),m=Math.floor(t/60)%60,s=t%60;return (h?h+':'+(m<10?'0':''):'')+m+':'+(s<10?'0':'')+s}
+  function itemFrom(id){
+    var s=song(id);if(!s)return null;
+    var t=s.title,a=s.artist;
+    if(s.ext&&!a){var i=t.indexOf(' - ');if(i>=0){a=t.slice(0,i);t=t.slice(i+3)}}
+    return {sid:id,title:t,artist:a||'',bpm:s.bpm||'',key:s.key||'',length:s.length||0};
+  }
+  function add(items){if(!items.length)return;mix.items=mix.items.concat(items);changed()}
+  function load(m){mix=JSON.parse(JSON.stringify(m));sel=-1;
+    $('stName').value=mix.name||'';$('stBlend').value=mix.blend||'beat';$('stBars').value=String(mix.bars||16);$('stFade').value=String(mix.fade||12);
+    $('stSaved').value=mix.id||'';changed(true)}
+  function readTop(){mix.name=$('stName').value.trim();mix.blend=$('stBlend').value;mix.bars=+$('stBars').value;mix.fade=+$('stFade').value}
+  function changed(quiet){render();clearTimeout(planTimer);planTimer=setTimeout(refreshPlan,350);if(!quiet&&mix.id)autosave()}
+  var saveTimer=null;function autosave(){clearTimeout(saveTimer);saveTimer=setTimeout(function(){save(true)},1500)}
+  function save(quiet){readTop();if(!mix.name)mix.name=defaultName();$('stName').value=mix.name;
+    return api('/api/studio/save',{mix:mix}).then(function(r){mix.id=r.mix.id;saved=r.mixes;fillSaved();if(!quiet)toast('Saved: '+mix.name)})}
+  function defaultName(){return 'GOOD MIXX '+new Date().toLocaleDateString([],{month:'short',day:'numeric'})}
+  function refreshPlan(){
+    readTop();
+    if(!mix.items.length){plan=null;render();return}
+    var mine=JSON.stringify(mix);
+    api('/api/studio/plan',{mix:mix,analyze:false}).then(function(p){if(JSON.stringify(mix)===mine){plan=p;render()}}).catch(function(){});
+  }
+  function fillSaved(){
+    $('stSaved').innerHTML='<option value="">Saved studio mixes ('+saved.length+')…</option>'+saved.slice().sort(function(a,b){return (b.saved||0)-(a.saved||0)}).map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.name)+' · '+m.items.length+' songs</option>'}).join('');
+    $('stSaved').value=mix&&mix.id||'';
+  }
+  // -- sources --
+  function renderSrc(){
+    document.querySelectorAll('.stSrc').forEach(function(b){b.classList.toggle('on',b.dataset.s===src)});
+    var h='';
+    if(src==='sets'){
+      h=sets.length?sets.map(function(s,i){return '<div class="st-set"><div class="d">'+new Date(s.start*1000).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' · '+esc(s.app)+'</div><div class="s">'+s.songs.length+' songs: '+esc(s.songs.slice(0,4).map(function(x){return x.title}).join(', '))+(s.songs.length>4?'…':'')+'</div><button data-rec="'+i+'">RECREATE THIS SET</button> <button data-add="'+i+'">ADD SONGS</button></div>'}).join(''):'<div class="muted">No djay or Traktor sets on this Mac yet.</div>';
+    }else if(src==='mixes'){
+      var last=mix.items.length?mix.items[mix.items.length-1]:null, lastId=last&&last.sid;
+      if(last){
+        var nxt=links.filter(function(l){return lastId&&same(l.from,lastId)}).sort(function(a,b){return b.count-a.count});
+        h+='<h3>NEXT AFTER '+esc(last.title.toUpperCase())+'</h3>'+(nxt.length?nxt.map(function(l){var s=song(l.to);return s?'<div class="row proven" data-next="'+esc(l.to)+'"><div class="info"><div class="t">'+esc(s.title)+'</div><div class="ar">'+esc(s.artist)+'</div></div><div class="meta">worked '+l.count+'×</div></div>':''}).join(''):'<div class="muted">No saved mixes from this song yet.</div>');
+      }
+      h+='<h3>ALL MY MIXES · TAP TO ADD BOTH SONGS</h3>'+(links.length?links.slice().sort(function(a,b){return b.count-a.count||b.last-a.last}).map(function(l){var a=song(l.from),b=song(l.to);if(!a||!b)return '';
+        return '<div class="row" data-f="'+esc(l.from)+'" data-t="'+esc(l.to)+'"><div class="info"><div class="t">'+esc(a.title)+' → '+esc(b.title)+'</div><div class="ar">'+esc(a.artist)+' → '+esc(b.artist)+'</div></div><div class="meta">'+l.count+'×</div></div>'}).join(''):'<div class="muted">No saved mixes yet.</div>');
+    }else{
+      h='<div class="filters"><input type="search" id="stQ" placeholder="Search songs" value="'+esc(srcQ)+'"></div>';
+      var q=srcQ.toLowerCase(),list=songs.filter(function(s){return !q||(s.title+' '+s.artist).toLowerCase().indexOf(q)>=0}).slice(0,80);
+      h+=list.map(function(s){return '<div class="row" data-song="'+esc(s.id)+'"><div class="info"><div class="t">'+esc(s.title)+'</div><div class="ar">'+esc(s.artist)+'</div></div><div class="meta">'+(s.bpm?Math.round(s.bpm)+' BPM':'')+(s.key?' · '+kd(s.key):'')+'</div></div>'}).join('')||'<div class="muted">No songs.</div>';
+    }
+    $('stSrc').innerHTML=h;
+    var q=$('stQ');if(q){q.addEventListener('input',function(){srcQ=q.value;var pos=q.selectionStart;renderSrc();var n=$('stQ');n.focus();n.setSelectionRange(pos,pos)})}
+  }
+  $('stSrc').addEventListener('click',function(e){
+    var b=e.target.closest('button'),r=e.target.closest('.row');
+    if(b&&b.dataset.rec!==undefined){var s=sets[+b.dataset.rec];
+      if(mix.items.length&&!confirm('Replace the songs in this mix with that set?'))return;
+      var name=$('stName').value.trim()||('Set '+new Date(s.start*1000).toLocaleDateString([],{month:'short',day:'numeric'}));
+      mix.items=s.songs.map(function(x){return Object.assign({},x)});mix.source='set:'+s.id;$('stName').value=name;
+      $('stBlend').value='set';changed();toast('Recreated '+s.songs.length+' songs. Blends use your set’s timing - change it any time.');return}
+    if(b&&b.dataset.add!==undefined){add(sets[+b.dataset.add].songs.map(function(x){return Object.assign({},x)}));return}
+    if(!r)return;
+    if(r.dataset.song){var it=itemFrom(r.dataset.song);if(it)add([it]);return}
+    if(r.dataset.next){var n=itemFrom(r.dataset.next);if(n){add([n]);renderSrc()}return}
+    if(r.dataset.f){var last=mix.items[mix.items.length-1],items=[];
+      if(!last||!same(last.sid,r.dataset.f)){var f=itemFrom(r.dataset.f);if(f)items.push(f)}
+      var t=itemFrom(r.dataset.t);if(t)items.push(t);add(items);renderSrc()}
+  });
+  document.querySelectorAll('.stSrc').forEach(function(b){b.addEventListener('click',function(){src=b.dataset.s;renderSrc()})});
+  // -- the mix --
+  function render(){
+    var items=mix.items, P=plan&&plan.items&&plan.items.length===items.length?plan.items:null;
+    var total=P?plan.total:0, found=P?P.filter(function(r){return r.path}).length:0;
+    $('stSum').innerHTML=items.length?'<span><b>'+items.length+'</b> songs</span>'+(P?'<span>length <b>'+clk(total)+'</b></span><span><b>'+found+'</b> of '+items.length+' found on this Mac</span>':'<span>working out the mix…</span>')+(info.ffmpeg===false?'<span style="color:#ff9b8a">building audio needs ffmpeg - SAVE PLAYLIST still works</span>':''):'<span>Add songs from a past set, your good mixes, or your song list.</span>';
+    // timeline
+    var tl='';
+    if(P&&total>0){
+      var step=total>5400?900:total>1800?600:total>600?300:60;
+      for(var t=0;t<total;t+=step)tl+='<div class="tick" style="left:'+(t/total*100)+'%">'+clk(t)+'</div>';
+      var lane=0;P.forEach(function(r,i){if(r.mix_start==null)return;
+        var fi=r.fade_in/r.dur*100,fo=r.fade_out/r.dur*100,bg=lane?'var(--accent-soft)':'var(--blue)';
+        tl+='<div class="bar l'+lane+(i===sel?' sel':'')+'" data-i="'+i+'" title="'+esc(who(r))+'" style="left:'+(r.mix_start/total*100)+'%;width:'+Math.max(.3,r.dur/total*100)+'%;background:linear-gradient(90deg,rgba(0,0,0,.45) 0%,transparent '+fi+'%,transparent '+(100-fo)+'%,rgba(0,0,0,.45) 100%),'+bg+'">'+esc(r.title)+'</div>';lane=1-lane});
+    }
+    $('stTimeline').innerHTML=tl||'<div class="muted" style="padding:34px 12px">The timeline shows here.</div>';
+    // rows
+    $('stRows').innerHTML=items.map(function(it,i){
+      var r=P?P[i]:null, st;
+      if(!r)st='<span class="m" style="color:var(--muted)">…</span>';
+      else if(r.path)st='<span class="ok" title="'+esc(r.path)+'">✓ ON THIS MAC</span>';
+      else st='<span class="nf">NOT FOUND<button data-find="'+i+'">FIND</button></span>';
+      var opt=i?'<select data-blend="'+i+'" title="How this song blends in"><option value="">Default · '+BL[mix.blend]+'</option>'+['beat','set','fade'].map(function(k){return '<option value="'+k+'"'+(it.blend===k?' selected':'')+'>'+BL[k]+'</option>'}).join('')+'</select>':'<span class="m" style="color:var(--muted)">first song</span>';
+      var w=r&&r.warn&&!(r.path===''&&/not found/.test(r.warn))?'<div class="w">'+esc(r.warn)+'</div>':'';
+      return '<div class="st-row'+(i===sel?' sel':'')+(r&&r.skip?' skip':'')+'" data-row="'+i+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="t">'+esc(it.title)+'</div><div class="ar">'+esc(it.artist)+'</div></div><div class="m">'+(it.bpm?Math.round(it.bpm)+' BPM':'— BPM')+(it.key?' · '+kd(it.key):'')+(r&&Math.abs(r.rate-1)>.001?'<br><span style="color:var(--muted)">played at '+(r.rate*100-100>0?'+':'')+(r.rate*100-100).toFixed(1)+'%</span>':'')+'</div>'+opt+'<div>'+st+'</div><div class="at">'+(r&&r.mix_start!=null?clk(r.mix_start):'')+'</div><div class="ctl"><button data-up="'+i+'" title="Move up">↑</button><button data-down="'+i+'" title="Move down">↓</button><button data-rm="'+i+'" title="Remove">✕</button></div>'+w+'</div>'}).join('')||'';
+  }
+  $('stRows').addEventListener('click',function(e){
+    var b=e.target.closest('button');var row=e.target.closest('.st-row');
+    if(!b){if(row&&!e.target.closest('select')){sel=+row.dataset.row;render()}return}
+    var I=mix.items;
+    if(b.dataset.up!==undefined){var i=+b.dataset.up;if(i>0){I.splice(i-1,0,I.splice(i,1)[0]);sel=i-1;changed()}}
+    else if(b.dataset.down!==undefined){var j=+b.dataset.down;if(j<I.length-1){I.splice(j+1,0,I.splice(j,1)[0]);sel=j+1;changed()}}
+    else if(b.dataset.rm!==undefined){I.splice(+b.dataset.rm,1);sel=-1;changed()}
+    else if(b.dataset.find!==undefined){var it=I[+b.dataset.find];$('stMsg').textContent='Pick the file in the window that opened on this Mac…';
+      api('/api/studio/choose',{item:it}).then(function(r){$('stMsg').textContent=r.path?'Found it.':'';if(r.path)refreshPlan()}).catch(function(){$('stMsg').textContent=''})}
+  });
+  $('stRows').addEventListener('change',function(e){var s=e.target.closest('select');if(!s||s.dataset.blend===undefined)return;
+    var it=mix.items[+s.dataset.blend];if(s.value)it.blend=s.value;else delete it.blend;changed()});
+  $('stTimeline').addEventListener('click',function(e){var b=e.target.closest('.bar');if(!b)return;sel=+b.dataset.i;render();
+    var row=document.querySelector('.st-row[data-row="'+sel+'"]');if(row)row.scrollIntoView({block:'nearest',behavior:'smooth'})});
+  ['stBlend','stBars','stFade'].forEach(function(id){$(id).addEventListener('change',function(){readTop();changed()})});
+  $('stName').addEventListener('input',function(){readTop();if(mix.id)autosave()});
+  $('stNew').addEventListener('click',function(){if(mix.items.length&&!mix.id&&!confirm('Start a new mix? This one isn’t saved.'))return;load(blank());renderSrc()});
+  $('stSave').addEventListener('click',function(){save()});
+  $('stDel').addEventListener('click',function(){if(!mix.id){load(blank());return}if(!confirm('Delete "'+mix.name+'"? Songs and audio files are not touched.'))return;
+    api('/api/studio/delete',{id:mix.id}).then(function(r){saved=r.mixes;load(blank());fillSaved()})});
+  $('stSaved').addEventListener('change',function(){var m=saved.filter(function(x){return x.id===$('stSaved').value})[0];if(m)load(m)});
+  // -- build + export --
+  function showStatus(st){
+    var busy=st.state==='rendering'||st.state==='planning';
+    $('stProg').style.display=busy?'':'none';$('stCancel').style.display=busy?'':'none';
+    $('stProg').firstChild.style.width=(st.pct||0)+'%';
+    ['stMp3','stWav'].forEach(function(id){$(id).disabled=busy});
+    if(busy)$('stMsg').innerHTML='Building <b>'+esc(st.name||'')+'</b>… '+(st.pct||0)+'%';
+    else if(st.state==='done'){$('stMsg').innerHTML='Done: <b>'+esc(st.out.split('/').pop())+'</b> ('+clk(st.total)+') <button id="stShow">SHOW IN FINDER</button>';
+      $('stShow').addEventListener('click',function(){api('/api/studio/reveal',{path:st.out})})}
+    else if(st.state==='error')$('stMsg').innerHTML='<span style="color:#ff9b8a">'+esc(st.msg)+'</span>';
+    else if(st.state==='cancelled')$('stMsg').textContent='Stopped.';
+    clearTimeout(renderTimer);if(busy)renderTimer=setTimeout(function(){api('/api/studio/render').then(showStatus)},700);
+  }
+  function build(fmt){
+    if(!mix.items.length){toast('Add some songs first.');return}
+    save(true).then(function(){$('stMsg').textContent='Finding the beats…';$('stProg').style.display='';
+      return api('/api/studio/render',{mix:mix,format:fmt})}).then(showStatus).catch(function(){$('stMsg').textContent='Could not start - is GOOD MIXX still running?'});
+  }
+  $('stMp3').addEventListener('click',function(){build('mp3')});
+  $('stWav').addEventListener('click',function(){build('wav')});
+  $('stCancel').addEventListener('click',function(){api('/api/studio/cancel',{}).then(showStatus)});
+  $('stM3u').addEventListener('click',function(){
+    if(!mix.items.length){toast('Add some songs first.');return}
+    save(true).then(function(){return api('/api/studio/export',{mix:mix})}).then(function(r){
+      $('stMsg').innerHTML='Saved playlist <b>'+esc(r.playlist.split('/').pop())+'</b> + tracklist ('+r.found+' of '+r.songs+' songs on this Mac) <button id="stShow2">SHOW IN FINDER</button>';
+      $('stShow2').addEventListener('click',function(){api('/api/studio/reveal',{path:r.playlist})});
+    }).catch(function(){$('stMsg').textContent='Could not save the playlist.'});
+  });
+  var started=false;
+  $('studioTab').addEventListener('click',function(){
+    if(started){api('/api/studio/sets').then(function(r){sets=r.sets;if(src==='sets')renderSrc()});return}
+    started=true;load(blank());
+    Promise.all([api('/api/studio/info'),api('/api/studio/sets')]).then(function(r){
+      info=r[0];saved=r[0].mixes;sets=r[1].sets;fillSaved();renderSrc();render();showStatus(info.render||{});
+    }).catch(function(){$('stSrc').innerHTML='<div class="muted">Could not reach GOOD MIXX.</div>'});
   });
 })();
 // ---- start screen (like BeatDeck) ----
