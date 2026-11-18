@@ -20,7 +20,7 @@ jobs:
   mac-app:
     # Builds the real Mac app (its own window, no browser) on one of GitHub's Macs, opens it to make sure it
     # starts and quits cleanly, and publishes the download when main changes.
-    runs-on: macos-14
+    runs-on: macos-latest
     permissions:
       contents: write
     steps:
