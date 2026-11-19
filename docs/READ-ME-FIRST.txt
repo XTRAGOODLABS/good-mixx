@@ -27,6 +27,9 @@ STUDIO (in the GOOD MIXX window on the Mac)
 Make a finished mix from your good mixes, or recreate a set you played on this Mac.
 - PAST SETS > RECREATE THIS SET, or add songs from MY MIXES / SONGS.
 - Pick how songs blend: Beat-matched, Set timing (like you played it) or Crossfade - for the whole mix or per song.
+- Set timing (for recreated sets) starts each song from your djay cue 1 - or a later cue if cue 1 is an intro - and
+  brings it in when you did, beat-matched. "Start:" under each song picks a different cue. REMOVE QUICK SKIPS drops
+  songs you only played for a few seconds.
 - Move songs on the timeline: drag a song to bring it in earlier / later (beat-matched blends snap to bars, hold Option for beats).
   Drag a song's right edge to end it sooner or later, its left edge to skip into it. ◂ ▸ nudge a bar, ↺ resets, UNDO undoes.
 - The timeline shows each song's wave. Press + / - to zoom. ▶ BLEND plays just that blend so you can hear it first.

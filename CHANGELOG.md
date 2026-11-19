@@ -5,6 +5,16 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.4.0 — November 18, 2026 · Set timing that follows your cues
+
+- **Set timing reads your djay cue points.** Each song starts from cue 1, or from the next cue in its first 90 s
+  when cue 1 starts on an intro (GOOD MIXX listens for where the kick comes in).
+- Songs come in **when djay says you started them**, now tempo-matched and beat-locked to the song before.
+- When djay's times don't add up (the last song had already ended, or a long pause) the song is blended
+  automatically and marked. Songs you only played for under 20 s are marked as **quick skips**, with
+  **REMOVE QUICK SKIPS** to drop them all.
+- **Start:** picker under each song: auto, beginning, or any of its cues.
+
 ## v1.3.0 — November 18, 2026 · Move the audio around
 
 - STUDIO timeline: **drag a song** to bring it in earlier or later. Beat-matched blends snap to whole bars

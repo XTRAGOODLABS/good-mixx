@@ -125,6 +125,16 @@ class Finder:
             self.misses[k] = time.time()
         return ""
 
+    def cues(self, item):
+        """Cue points saved in djay for this song (empty if djay doesn't know it)."""
+        if not self.djay:
+            return []
+        try:
+            tid = item.get("tid") or self.djay.tid_for(item.get("title"), item.get("artist"))
+            return self.djay.cues_for(tid) if tid else []
+        except Exception:
+            return []
+
     def _from_id(self, item):
         sid = str(item.get("sid") or "")
         if sid.startswith("tk:"):
@@ -317,6 +327,7 @@ def plan(mix, finder=None, analyze=True, lengths=None):
         else:
             r["length"] = float(it.get("length") or 0) or DEFAULT_LEN
         r["bpm"] = _bpm(it.get("bpm"))
+        r["cues"] = (finder.cues(it) if finder else it.get("cues")) or []
         rows.append(r)
     playable = [r for r in rows if r["path"]]
     use = playable if playable else rows          # nothing on this Mac: still show a preview
@@ -326,7 +337,7 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             r["warn"] = "not found on this Mac" + (" - left out of the audio mix" if playable else "")
     prev = None
     for idx, r in enumerate(use):
-        cin = max(0.0, float(r.get("cut_in") or 0))
+        cin = _start_point(r, analyze)
         cout = float(r.get("cut_out") or 0) or r["length"]
         cout = min(cout, r["length"]) if r["length"] else cout
         if cout - cin < 8:
@@ -342,21 +353,7 @@ def plan(mix, finder=None, analyze=True, lengths=None):
         a = prev
         a_end = a["mix_start"] + (a["song_out"] - a["song_in"]) / a["rate"]
         if want == "set":
-            if a.get("set_start") and r.get("set_start"):
-                gap = float(r["set_start"]) - float(a["set_start"])
-                start = a["mix_start"] + (gap - a["song_in"]) / a["rate"]
-                hi = a_end - 2.0
-                if start > hi:
-                    start = a_end - fade
-                start = max(a["mix_start"] + 10.0, start)
-                over = max(1.0, min(fade, a_end - start))
-                r["mix_start"] = start
-                r["fade_in"] = over
-                _cut(a, start + over)
-                a["fade_out"] = over
-            else:
-                used = "fade"
-                r.setdefault("warn", "no set timing for this song - used a crossfade")
+            used = _set_blend(a, r, bars, fade, analyze)
         if want == "beat":
             applied, note = _beat_blend(a, r, bars, analyze)
             if not applied:
@@ -390,10 +387,107 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             "preview_only": not playable}
 
 
+def _start_point(r, analyze):
+    """Where in the song to start (song seconds). A trim you dragged wins; otherwise the cue you picked;
+    otherwise cue 1 - or, if cue 1 starts on an intro with no clear beat, the next cue in the first 90 s."""
+    cues = [c for c in r.get("cues") or [] if c.get("t", -1) >= 0]
+    if r.get("cut_in"):
+        r["start_from"] = "trimmed"
+        return max(0.0, float(r["cut_in"]))
+    pick = r.get("start_cue")
+    if pick == 0 or pick == "0":
+        r["start_from"] = "beginning"
+        return 0.0
+    if pick:
+        for c in cues:
+            if c["n"] == int(pick):
+                r["start_from"] = "cue %d" % c["n"]
+                return c["t"]
+    if not cues:
+        r["start_from"] = "beginning"
+        return 0.0
+    first = next((c for c in cues if c["n"] == 1), cues[0])
+    r["start_from"] = "cue %d" % first["n"]
+    if analyze and r.get("path"):
+        later = sorted((c for c in cues if first["t"] + 4 <= c["t"] <= first["t"] + 90), key=lambda c: c["t"])
+        if later:
+            p1 = punch(r["path"], first["t"])
+            for c in later:                      # cue 1 starts quiet (an intro) and a later cue hits hard
+                pc = punch(r["path"], c["t"])
+                if pc > 0 and p1 < 0.35 * pc:
+                    r["start_from"] = "cue %d (skips the intro)" % c["n"]
+                    return c["t"]
+    return first["t"]
+
+
+_punch = {}
+
+
+def punch(path, start, secs=6.0):
+    """How hard the kick / bass hits in the few seconds after `start` (0 = nothing)."""
+    try:
+        key = (str(path), os.stat(path).st_mtime, round(start, 2))
+    except OSError:
+        return 0.0
+    if key not in _punch:
+        a = decode(path, start, secs)
+        hits = []
+        if a:
+            win, hop = 256, 128                 # ~23 ms windows: steady tones and pads don't count, kicks do
+            prev = None
+            for i in range(0, len(a) - win, hop):
+                e = 0
+                for v in a[i:i + win]:
+                    e += v * v
+                e = math.sqrt(e / win)
+                if prev is not None:
+                    hits.append(max(0.0, e - prev))
+                prev = e
+        hits.sort()
+        top = hits[int(len(hits) * 0.9):] if hits else []
+        _punch[key] = sum(top) / len(top) if top else 0.0
+    return _punch[key]
+
+
+def _set_blend(a, b, bars, fade, analyze):
+    """Bring `b` in when djay says you started it in the set, beat-matched to `a` when the tempos allow.
+    Falls back to an automatic blend when djay's times don't fit. Returns the blend style used."""
+    a_end = a["mix_start"] + (a["natural_out"] - a["song_in"]) / a["rate"]
+    if not (a.get("set_start") and b.get("set_start")):
+        b.setdefault("warn", "no set timing for this song - blended automatically")
+        return _auto(a, b, bars, analyze)
+    gap = float(b["set_start"]) - float(a["set_start"])
+    if gap < 20:
+        a.setdefault("warn", "only played for %d s in your set - maybe a skip" % max(0, gap))
+        a["quick"] = True
+        return _auto(a, b, bars, analyze)
+    at = a["mix_start"] + gap
+    if at > a_end - 4:
+        b.setdefault("warn", "djay says it started %s after the last song began, but that song had ended by then"
+                             " - blended automatically" % clock(gap))
+        return _auto(a, b, bars, analyze)
+    applied, note = _beat_blend(a, b, bars, analyze, at=at)
+    if applied:
+        if note:
+            b.setdefault("warn", note)
+        return "set"
+    over = max(1.0, min(fade, a_end - at))           # tempos too far apart: come in at the set time, plain fade
+    b.update(mix_start=at, fade_in=over)
+    _cut(a, at + over)
+    a["fade_out"] = over
+    return "set"
+
+
+def _auto(a, b, bars, analyze):
+    """Beat-matched blend at the end of `a`, or a crossfade if that can't be done."""
+    applied, _ = _beat_blend(a, b, bars, analyze)
+    return "beat" if applied else "fade"
+
+
 def _nudge(a, b, shift, used):
     """Move song `b` in earlier (shift < 0) or later, by hand. Beat-matched blends move by whole beats
     so the beats stay lined up; song `a` then ends where the new blend ends."""
-    if used == "beat" and a.get("bpm"):
+    if b.get("beat_locked") and a.get("bpm"):
         beat = 60.0 / (a["bpm"] * a["rate"])
         shift = round(shift / beat) * beat
     else:
@@ -422,7 +516,7 @@ def _cut(a, mix_time):
     a["song_out"] = min(a["song_out"], a["song_in"] + (mix_time - a["mix_start"]) * a["rate"])
 
 
-def _beat_blend(a, b, bars, analyze):
+def _beat_blend(a, b, bars, analyze, at=None):
     """Tempo-match `b` to `a` and line its first beat up with a beat of `a`.
     Returns (applied, note): applied=False means use a crossfade instead."""
     eff = a["bpm"] * a["rate"] if a["bpm"] else 0
@@ -436,7 +530,11 @@ def _beat_blend(a, b, bars, analyze):
     while bars > 2 and (bars * 4 * ta > a_len * 0.45 or bars * 4 * tb > b_len * 0.45):
         bars //= 2
     blend_song_a = bars * 4 * ta                      # blend length in song A's own seconds
-    target = a["song_out"] - blend_song_a - 4 * 4 * ta  # finish the blend ~4 bars before A ends
+    if at is not None:                                 # set timing: start the blend when djay says
+        target = a["song_in"] + (at - a["mix_start"]) * a["rate"]
+        blend_song_a = max(4 * ta, min(blend_song_a, a["song_out"] - target - ta))
+    else:
+        target = a["song_out"] - blend_song_a - 4 * 4 * ta  # finish the blend ~4 bars before A ends
     target = max(a["song_in"] + 4 * ta, target)
     pa = pb = None
     if analyze and a.get("path") and b.get("path"):
@@ -454,7 +552,7 @@ def _beat_blend(a, b, bars, analyze):
         b_in += tb * math.ceil((b["song_in"] - b_in) / tb)
     t_bs = a["mix_start"] + (s_bs - a["song_in"]) / a["rate"]
     over = blend_song_a / a["rate"]
-    b.update(mix_start=t_bs, song_in=b_in, rate=eff / b_bpm, fade_in=over)
+    b.update(mix_start=t_bs, song_in=b_in, rate=eff / b_bpm, fade_in=over, beat_locked=True)
     _cut(a, t_bs + over)
     a["fade_out"] = over
     if analyze and not found:

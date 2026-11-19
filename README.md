@@ -10,7 +10,7 @@ A booth companion from **Crate OS by XTRA GOOD LABS** for **djay** and **Traktor
 with your iPad as the second screen. Original idea by **DJ Aquarobotics**.
 
 [![Checks](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml/badge.svg)](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml)
-[![Mac app](https://img.shields.io/badge/Mac_app-v1.3.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
+[![Mac app](https://img.shields.io/badge/Mac_app-v1.4.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
 ![Platform](https://img.shields.io/badge/tested_on-macOS-b79ae6?style=flat-square)
 
 [**Download for Mac**](https://github.com/XTRAGOODLABS/good-mixx/releases/latest) · [**Install guide**](INSTALL-MAC.md) · [**Version history**](CHANGELOG.md) · [**What's next**](ROADMAP.md)
@@ -35,7 +35,9 @@ In the GOOD MIXX window on the Mac, the **STUDIO** tab builds a mix in the spiri
 - **Build a new mix** from your saved good mixes (chain them: "next after this song") or your song list.
 - **Three blend styles**, for the whole mix or song by song: **beat-matched** (tempo matched with the pitch kept,
   beats lined up, blended over 8/16/32 bars), **your set's timing** (each song comes in when it did in the real set),
-  or a **simple crossfade**.
+  or a **simple crossfade**. Set timing uses your djay cue points: each song starts from cue 1, or from a later cue
+  when cue 1 starts on an intro, comes in when djay says you started it, and is beat-matched to the song before.
+  Where djay's times don't add up it blends automatically; songs you only played for seconds are flagged as skips.
 - **Song waves on the timeline**, with zoom, so you can see each song, its blends and fades.
 - **Move the audio around:** drag a song to bring it in earlier or later (beat-matched blends snap to whole bars,
   hold ⌥ for single beats), drag its right edge to end it sooner or later, drag its left edge to skip into it.

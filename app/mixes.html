@@ -145,6 +145,8 @@ select{font:600 13px var(--font-body);min-height:44px;padding:0 10px;border-radi
 .st-row .ok{color:var(--green);font:600 11px var(--font-mono)}
 .st-row .nf{color:#ff9b8a;font:600 11px var(--font-mono)}
 .st-row .nf button{min-height:30px;font-size:11px;padding:0 8px;margin-left:4px}
+.st-row .from{margin-top:3px;min-height:26px;height:26px;font-size:11px;padding:0 6px;max-width:100%;color:var(--muted)}
+.st-row.quick{border-color:#ff9b8a66}
 .st-row .at{font:500 12px var(--font-mono);color:var(--accent-soft);display:flex;align-items:center;justify-content:flex-end;gap:3px}
 .st-row .at button{min-height:30px;min-width:26px;padding:0 6px;font-size:12px}
 .st-row .at .moved{color:var(--fg);font-size:10px}
@@ -569,6 +571,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
     var items=mix.items, P=plan&&plan.items&&plan.items.length===items.length?plan.items:null;
     var total=P?plan.total:0, found=P?P.filter(function(r){return r.path}).length:0;
     $('stSum').innerHTML=items.length?'<span><b>'+items.length+'</b> songs</span>'+(P?'<span>length <b>'+clk(total)+'</b></span><span><b>'+found+'</b> of '+items.length+' found on this Mac</span>':planErr?'<span style="color:#ff9b8a">'+esc(planErr)+'</span> <button id="stRetry" style="min-height:30px;font-size:11px">TRY AGAIN</button>':'<span>finding your songs on this Mac…</span>')+(info.ffmpeg===false?'<span style="color:#ff9b8a">building audio needs ffmpeg - SAVE PLAYLIST still works</span>':'')
+      +(P&&P.some(function(r){return r.quick})?'<button id="stSkips" style="min-height:30px;font-size:11px">REMOVE '+P.filter(function(r){return r.quick}).length+' QUICK SKIP'+(P.filter(function(r){return r.quick}).length>1?'S':'')+'</button>':'')
       +(P?'<span class="st-zoom"><button data-z="-1" title="Zoom out">−</button><button data-z="0" title="Fit the whole mix">FIT</button><button data-z="1" title="Zoom in">+</button></span>':''):'<span>Add songs from a past set, your good mixes, or your song list.</span>';
     // timeline
     var tl='';
@@ -585,6 +588,8 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
       var z=+b.dataset.z, box=$('stTimeline'), mid=(box.scrollLeft+box.clientWidth/2)/box.scrollWidth;
       zoom=z===0?1:Math.max(1,Math.min(32,z>0?zoom*2:zoom/2));render();box.scrollLeft=mid*box.scrollWidth-box.clientWidth/2})});
     var rt=$('stRetry');if(rt)rt.addEventListener('click',refreshPlan);
+    var sk=$('stSkips');if(sk)sk.addEventListener('click',function(){var p=plan.items;snap();
+      mix.items=mix.items.filter(function(x,i){return !(p[i]&&p[i].quick)});sel=-1;changed();toast('Removed the songs you only played for a few seconds. UNDO brings them back.')});
     // rows
     $('stRows').innerHTML=items.map(function(it,i){
       var r=P?P[i]:null, st;
@@ -593,7 +598,16 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
       else st='<span class="nf">NOT FOUND<button data-find="'+i+'">FIND</button></span>';
       var opt=i?'<select data-blend="'+i+'" title="How this song blends in"><option value="">Default · '+BL[mix.blend]+'</option>'+['beat','set','fade'].map(function(k){return '<option value="'+k+'"'+(it.blend===k?' selected':'')+'>'+BL[k]+'</option>'}).join('')+'</select>':'<span class="m" style="color:var(--muted)">first song</span>';
       var w=r&&r.warn&&!(r.path===''&&/not found/.test(r.warn))?'<div class="w">'+esc(r.warn)+'</div>':'';
-      return '<div class="st-row'+(i===sel?' sel':'')+(r&&r.skip?' skip':'')+'" data-row="'+i+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="t">'+esc(it.title)+'</div><div class="ar">'+esc(it.artist)+'</div></div><div class="m">'+(it.bpm?Math.round(it.bpm)+' BPM':'— BPM')+(it.key?' · '+kd(it.key):'')+(r&&Math.abs(r.rate-1)>.001?'<br><span style="color:var(--muted)">played at '+(r.rate*100-100>0?'+':'')+(r.rate*100-100).toFixed(1)+'%</span>':'')+'</div>'+opt+'<div>'+st+'</div><div class="at">'+(i&&r&&r.mix_start!=null?'<button data-nudge="'+i+'" data-d="-1" title="Bring it in earlier">◂</button>':'')+'<span>'+(r&&r.mix_start!=null?clk(r.mix_start):'')+(it.nudge||it.cut_in||it.cut_out?'<br><span class="moved">moved</span>':'')+'</span>'+(i&&r&&r.mix_start!=null?'<button data-nudge="'+i+'" data-d="1" title="Bring it in later">▸</button>':'')+(it.nudge||it.cut_in||it.cut_out?'<button data-reset="'+i+'" title="Put it back where GOOD MIXX had it">↺</button>':'')+'</div><div class="ctl">'+(i?'<button class="hear'+(playing&&playing.kind==='blend'&&playing.index===i?' on':'')+'" data-hear="'+i+'" title="Hear the blend into this song">'+(playing&&playing.kind==='blend'&&playing.index===i?'■ STOP':'▶ BLEND')+'</button>':'')+'<button data-up="'+i+'" title="Move up">↑</button><button data-down="'+i+'" title="Move down">↓</button><button data-rm="'+i+'" title="Remove">✕</button></div>'+w+'</div>'}).join('')||'';
+      var from='';
+      if(r&&r.mix_start!=null){
+        var cues=r.cues||[], cur=it.cut_in?'trim':(it.start_cue===0||it.start_cue==='0'?'0':it.start_cue?String(it.start_cue):'');
+        from='<select class="from" data-from="'+i+'" title="Where this song starts">'
+          +'<option value=""'+(cur===''?' selected':'')+'>Start: '+(cur===''?esc(r.start_from||'auto'):'auto')+'</option>'
+          +'<option value="0"'+(cur==='0'?' selected':'')+'>Start: beginning</option>'
+          +cues.map(function(c){return '<option value="'+c.n+'"'+(cur===String(c.n)?' selected':'')+'>Start: cue '+c.n+' · '+clk(c.t)+'</option>'}).join('')
+          +(cur==='trim'?'<option value="trim" selected>Start: trimmed at '+clk(it.cut_in)+'</option>':'')+'</select>';
+      }
+      return '<div class="st-row'+(i===sel?' sel':'')+(r&&r.skip?' skip':'')+(r&&r.quick?' quick':'')+'" data-row="'+i+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="t">'+esc(it.title)+'</div><div class="ar">'+esc(it.artist)+'</div>'+from+'</div><div class="m">'+(it.bpm?Math.round(it.bpm)+' BPM':'— BPM')+(it.key?' · '+kd(it.key):'')+(r&&Math.abs(r.rate-1)>.001?'<br><span style="color:var(--muted)">played at '+(r.rate*100-100>0?'+':'')+(r.rate*100-100).toFixed(1)+'%</span>':'')+'</div>'+opt+'<div>'+st+'</div><div class="at">'+(i&&r&&r.mix_start!=null?'<button data-nudge="'+i+'" data-d="-1" title="Bring it in earlier">◂</button>':'')+'<span>'+(r&&r.mix_start!=null?clk(r.mix_start):'')+(it.nudge||it.cut_in||it.cut_out?'<br><span class="moved">moved</span>':'')+'</span>'+(i&&r&&r.mix_start!=null?'<button data-nudge="'+i+'" data-d="1" title="Bring it in later">▸</button>':'')+(it.nudge||it.cut_in||it.cut_out?'<button data-reset="'+i+'" title="Put it back where GOOD MIXX had it">↺</button>':'')+'</div><div class="ctl">'+(i?'<button class="hear'+(playing&&playing.kind==='blend'&&playing.index===i?' on':'')+'" data-hear="'+i+'" title="Hear the blend into this song">'+(playing&&playing.kind==='blend'&&playing.index===i?'■ STOP':'▶ BLEND')+'</button>':'')+'<button data-up="'+i+'" title="Move up">↑</button><button data-down="'+i+'" title="Move down">↓</button><button data-rm="'+i+'" title="Remove">✕</button></div>'+w+'</div>'}).join('')||'';
   }
   $('stRows').addEventListener('click',function(e){
     var b=e.target.closest('button');var row=e.target.closest('.st-row');
@@ -609,7 +623,9 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
     else if(b.dataset.find!==undefined){var it=I[+b.dataset.find];$('stMsg').textContent='Pick the file in the window that opened on this Mac…';
       api('/api/studio/choose',{item:it}).then(function(r){$('stMsg').textContent=r.path?'Found it.':'';if(r.path)refreshPlan()}).catch(function(){$('stMsg').textContent=''})}
   });
-  $('stRows').addEventListener('change',function(e){var s=e.target.closest('select');if(!s||s.dataset.blend===undefined)return;
+  $('stRows').addEventListener('change',function(e){var f=e.target.closest('select.from');
+    if(f){if(f.value==='trim')return;snap();var fi=mix.items[+f.dataset.from];delete fi.cut_in;if(f.value==='')delete fi.start_cue;else fi.start_cue=+f.value;changed();return}
+    var s=e.target.closest('select');if(!s||s.dataset.blend===undefined)return;
     snap();var it=mix.items[+s.dataset.blend];if(s.value)it.blend=s.value;else delete it.blend;changed()});
   // -- moving songs on the timeline --
   var undo=[];
@@ -625,11 +641,11 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
   function nextOf(i){var p=P();for(var j=i+1;j<p.length;j++)if(p[j].mix_start!=null)return j;return -1}
   // how far one step moves song i in: a bar (or a beat) in beat-matched blends, a second otherwise
   function step(i,beat){var p=P();if(!p)return 1;var r=p[i],a=p[prevOf(i)];
-    if(r&&r.blend_used==='beat'&&a&&a.bpm){var t=60/(a.bpm*a.rate);return beat?t:4*t}return beat?0.25:1}
+    if(r&&r.beat_locked&&a&&a.bpm){var t=60/(a.bpm*a.rate);return beat?t:4*t}return beat?0.25:1}
   function snapTo(i,dt,beat){var st=step(i,beat);return Math.round(dt/st)*st}
   function nudge(i,dt){var it=mix.items[i];it.nudge=Math.round(((it.nudge||0)+dt)*1000)/1000;if(Math.abs(it.nudge)<0.001)delete it.nudge}
   function fmtShift(i,dt){var p=P(),r=p[i],a=p[prevOf(i)];
-    if(r&&r.blend_used==='beat'&&a&&a.bpm){var beats=Math.round(dt/(60/(a.bpm*a.rate)));if(!beats)return 'no change';
+    if(r&&r.beat_locked&&a&&a.bpm){var beats=Math.round(dt/(60/(a.bpm*a.rate)));if(!beats)return 'no change';
       var bars=beats/4;return (beats>0?'+':'')+(beats%4?beats+' beat'+(Math.abs(beats)>1?'s':''):bars+' bar'+(Math.abs(bars)>1?'s':''))}
     return (dt>0?'+':'')+dt.toFixed(1)+' s'}
   var drag=null, justDragged=false;
@@ -658,7 +674,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
     else{drag.dt=Math.max(-r.song_in/r.rate,Math.round(raw*10)/10);
       drag.bar.style.left=(drag.left+drag.dt/drag.total*drag.W)+'px';drag.bar.style.width=Math.max(8,drag.width-drag.dt/drag.total*drag.W)+'px';
       tip=(drag.dt>=0?'skip '+drag.dt.toFixed(1)+' s more of the start':'play '+(-drag.dt).toFixed(1)+' s more of the start')}
-    var t=$('stTip');t.textContent=tip+(drag.kind!=='start'&&r.blend_used==='beat'?'  (⌥ = beats)':'');t.style.display='block';
+    var t=$('stTip');t.textContent=tip+(drag.kind!=='start'&&r.beat_locked?'  (⌥ = beats)':'');t.style.display='block';
     t.style.left=Math.max(0,drag.bar.offsetLeft+(drag.kind==='end'?drag.bar.offsetWidth-80:0))+'px';
   });
   function endDrag(){
