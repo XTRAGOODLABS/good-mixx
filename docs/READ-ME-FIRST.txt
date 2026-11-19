@@ -14,14 +14,25 @@ START
 DJAY
 Just play in djay on this Mac. To read djay's keys, allow GOOD MIXX when asked
 (System Settings > Privacy & Security > Accessibility > GOOD MIXX).
+After you update GOOD MIXX, macOS may stop counting that switch even though it still shows ON:
+select GOOD MIXX there, click -, click + and add it again, then quit and reopen GOOD MIXX.
 
 TRAKTOR PRO 4 or 3 (one time)
-1. Quit Traktor. Double-click "Add Traktor Link" (keep it next to GOOD MIXX). Type your Mac password if asked.
+1. Put GOOD MIXX in Applications and open it once (see START).
+2. Quit Traktor completely.
+3. In the folder that came in the download, RIGHT-CLICK "Add Traktor Link" > Open > Open.
+   (Just double-clicking it gets blocked the first time because it was downloaded.)
+   A window opens. Type your Mac password if it asks - you won't see it as you type, that's normal.
+   Wait until it says it's done, then press any key to close it.
    If it says it couldn't change Traktor's files: System Settings > Privacy & Security > App Management >
-   turn on Terminal, quit Terminal (Command+Q), and double-click it again.
-2. Open Traktor > Preferences > Controller Manager > Add... > Traktor > Kontrol D2 (you don't need to own one).
-3. Open GOOD MIXX and play. Keys show the Traktor way (like 3m) while you're on Traktor.
-Undo any time with "Remove Traktor Link". Run "Add Traktor Link" again after Traktor updates.
+   turn on Terminal, quit Terminal (Command+Q), and do step 3 again.
+4. Open Traktor > Preferences > Controller Manager > Add... > Traktor > Kontrol D2
+   (you don't need to own a D2).
+5. Open GOOD MIXX, then load a song in Traktor. It worked if the song's name shows up in GOOD MIXX.
+   Keys show the Traktor way (like 3m) while you're on Traktor.
+NOT WORKING? Right-click "Check Traktor Link" > Open > Open. It says in plain words what's missing
+   and saves a report (Library > Logs > GOOD MIXX traktor check.txt) you can send to whoever gave you GOOD MIXX.
+After a Traktor update: do step 3 again. To undo: right-click "Remove Traktor Link" > Open > Open.
 
 SET RECORDER (djay on the Mac)
 Click SET UP RECORDER at the top of the GOOD MIXX window once, then quit djay and open it again.

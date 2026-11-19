@@ -19,15 +19,28 @@ echo "-- D2 folder:"; ls -la "$CSI/D2" "$CSI/D2/Api" 2>&1
 echo "-- link address:"; head -1 "$CSI/D2/Api/ApiClient.js" 2>&1
 echo "-- leftovers:"; ls -d "$CSI"/D2* 2>&1
 echo "-- Traktor running:"; pgrep -lf "Traktor" 2>&1 | head -3
-echo "-- DJ Mixes running on 8770:"; lsof -nP -iTCP:8770 -sTCP:LISTEN 2>&1 | head -3
-echo "-- DJ Mixes answer:"; curl -s -m 3 http://localhost:8770/api/now | head -c 300; echo
-echo "-- test message to DJ Mixes:"; curl -s -m 3 -X POST -d '{}' http://localhost:8770/traktor/updateMasterClock; echo " (sent)"
+echo "-- GOOD MIXX running on 8770:"; lsof -nP -iTCP:8770 -sTCP:LISTEN 2>&1 | head -3
+echo "-- GOOD MIXX answer:"; curl -s -m 3 http://localhost:8770/api/now | head -c 300; echo
+echo "-- test message to GOOD MIXX:"; curl -s -m 3 -X POST -d '{}' http://localhost:8770/traktor/updateMasterClock; echo " (sent)"
 curl -s -m 3 http://localhost:8770/api/now | grep -o '"traktor": [a-z]*'
 echo "-- Traktor settings mention D2:"; grep -a -c "D2" "$TD/Traktor Settings.tsi" 2>&1
 echo "-- Traktor logs:"; ls -t "$TD/Logs/"* 2>/dev/null | head -3
 L="$(ls -t "$TD/Logs/"*/* "$TD/Logs/"* 2>/dev/null | grep -v '/$' | head -1)"
 [ -f "$L" ] && grep -a -i -E "qml|d2|api|error|warn" "$L" | tail -40
 } > "$OUT" 2>&1
-cat "$OUT"
-echo ""; echo "Saved to your Library/Logs folder."
+echo ""
+echo "================ RESULT ================"
+ok=1
+if [ -z "$APP" ]; then echo "NO  - Traktor Pro 4 or 3 isn't in Applications."; ok=0
+else echo "YES - Traktor found."; fi
+if [ -n "$APP" ] && grep -q "ApiModule" "$CSI/D2/D2.qml" 2>/dev/null && [ -f "$CSI/D2/Api/ApiClient.js" ]; then
+  echo "YES - The Traktor link is installed."
+else echo "NO  - The Traktor link isn't installed. Quit Traktor, then right-click \"Add Traktor Link\" > Open > Open."; ok=0; fi
+if curl -s -m 3 http://localhost:8770/api/now >/dev/null; then echo "YES - GOOD MIXX is open."
+else echo "NO  - GOOD MIXX isn't open. Open it, then check again."; ok=0; fi
+if [ -n "$TD" ] && grep -a -q "D2" "$TD/Traktor Settings.tsi" 2>/dev/null; then echo "YES - Kontrol D2 is added in Traktor."
+else echo "NO? - Kontrol D2 may not be added: Traktor > Preferences > Controller Manager > Add... > Traktor > Kontrol D2."; ok=0; fi
+[ $ok = 1 ] && echo "Everything looks right. Load a song in Traktor and it should show in GOOD MIXX."
+echo ""
+echo "Full report saved to: Library > Logs > GOOD MIXX traktor check.txt (send it to whoever gave you GOOD MIXX)."
 read -n 1 -s -r -p "Press any key to close."

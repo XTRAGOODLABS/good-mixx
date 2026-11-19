@@ -23,7 +23,7 @@ cp "$ROOT"/app/assets/*.woff2 "$ROOT"/app/assets/*.png "$ROOT/app/assets/OFL-IBM
 cp "$ROOT/app/tools/djay_deck_keys.js" "$APP/Resources/app/tools/"
 cp "$ROOT"/app/traktor-link/Api/* "$APP/Resources/app/traktor-link/Api/"
 cp "$ROOT/app/traktor-link/LICENSE-traktor-api-client.txt" "$APP/Resources/app/traktor-link/"
-cp "$ROOT/extras/Add Traktor Link.command" "$ROOT/extras/Remove Traktor Link.command" "$OUT/"
+cp "$ROOT/extras/Add Traktor Link.command" "$ROOT/extras/Remove Traktor Link.command" "$ROOT/extras/Check Traktor Link.command" "$OUT/"
 cp "$ROOT/docs/READ-ME-FIRST.txt" "$OUT/READ ME FIRST.txt"
 cp "$ROOT/THIRD-PARTY-NOTICES.md" "$OUT/"
 chmod -R a+rX "$OUT"
