@@ -11,6 +11,7 @@ import { pathToFileURL } from "node:url";
 
 const [mcpDir, out, axEvery = "3"] = process.argv.slice(2);
 const { Djay } = await import(pathToFileURL(join(mcpDir, "dist", "djay.js")).href);
+const { parseDecks } = await import(pathToFileURL(join(mcpDir, "dist", "ax.js")).href);
 const dj = new Djay();
 const midi = await dj.startMidi();
 const t0 = Date.now();
@@ -33,11 +34,48 @@ function pollMidi() {
   }
 }
 
+// Why screen reading failed, in plain words (logged when it changes, so the log says what went wrong).
+let lastWhy = null;
+async function why(err) {
+  let st = null;
+  try { st = await dj.ax.status(); } catch (e) { st = { error: String(e).slice(0, 160) }; }
+  let reason;
+  const msg = String(err || "");
+  if (st && st.error) reason = "screen reader would not start: " + st.error;
+  else if (st && st.trusted === false || /accessibility permission/i.test(msg)) reason = "no-access";
+  else if (st && st.running === false || /not running/i.test(msg)) reason = "djay-closed";
+  else if (/no djay window/i.test(msg)) reason = "no-window";
+  else if (st && st.hidden) reason = "djay-hidden";
+  else if (msg) reason = "error: " + msg.slice(0, 160);
+  else reason = "no-decks";
+  return { reason, status: st };
+}
+async function note(info, extra = {}) {
+  if (info.reason === lastWhy) return;
+  lastWhy = info.reason;
+  log({ k: "ax", ok: info.reason === "ok", reason: info.reason, status: info.status, ...extra });
+}
+
 async function readScreen() {
   if (axBusy) return;
   axBusy = true;
   try {
-    const decks = await dj.readouts();
+    let nodes;
+    try {
+      nodes = await dj.ax.snapshot(false, 6000);
+    } catch (e) {
+      await note(await why(e));
+      log({ k: "d", decks: [] });
+      return;
+    }
+    const decks = parseDecks(nodes);
+    if (!decks.length) {
+      // djay answered but no deck readouts were found: keep a few labels so the cause can be seen.
+      const sample = nodes.map((n) => n.desc || n.title || "").filter((x) => /deck/i.test(x)).slice(0, 12);
+      await note(await why(null), { nodes: nodes.length, sample });
+    } else {
+      await note({ reason: "ok", status: null });
+    }
     log({
       k: "d",
       decks: decks.map((d) => ({ n: d.deck, title: d.title, artist: d.artist, bpm: d.bpm, key: d.key, time: d.time,

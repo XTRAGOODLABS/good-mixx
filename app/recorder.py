@@ -87,13 +87,56 @@ class Recorder:
             return None
         return any('"title"' in l for l in reads[-6:])
 
+    SCREEN_TEXT = {
+        "ok": "Reading djay's screen fine.",
+        "no-access": "macOS is blocking GOOD MIXX from reading djay's screen. In System Settings > Privacy & Security > "
+                     "Accessibility, select GOOD MIXX, click minus to remove it, click plus and add it again, "
+                     "then quit and reopen GOOD MIXX.",
+        "djay-closed": "djay Pro isn't open.",
+        "no-window": "djay is open but its main window can't be found. Make sure djay's window is open (not minimized).",
+        "djay-hidden": "djay is hidden. Show djay's window (click its icon in the Dock).",
+        "no-decks": "GOOD MIXX can see djay's window but not the deck info. Try djay's normal 2-deck or 4-deck view "
+                    "(not full-screen library or a special mode).",
+    }
+
+    def screen_reason(self):
+        """The latest reason (from the recorder log) that djay's screen could or couldn't be read."""
+        f = self.file
+        if not (f and f.exists()):
+            return None
+        if getattr(self, "_ax_file", None) != f:
+            self._ax_file, self._ax_pos, self._ax_reason = f, 0, None
+        try:
+            with open(f, "rb") as fh:
+                fh.seek(self._ax_pos)
+                data = fh.read()
+        except OSError:
+            return self._ax_reason
+        cut = data.rfind(b"\n") + 1
+        self._ax_pos += cut
+        for line in data[:cut].splitlines():
+            if b'"k":"ax"' in line or b'"k": "ax"' in line:
+                try:
+                    self._ax_reason = json.loads(line).get("reason")
+                except ValueError:
+                    pass
+        return self._ax_reason
+
+    def screen_text(self, reason):
+        if not reason:
+            return ""
+        return self.SCREEN_TEXT.get(reason, "djay's screen couldn't be read (" + reason + ").")
+
     def status(self):
         node, ver, ok = find_node()
+        rec = bool(self.proc and self.proc.poll() is None)
+        reason = self.screen_reason() if rec else None
         return {"installed": self.installed(), "node": ver, "node_ok": ok, "enabled": self.enabled(),
                 "recording": bool(self.proc and self.proc.poll() is None), "file": self.file.name if self.file else "",
                 "djay": self.djay_running() if os.path.exists("/usr/bin/pgrep") else False,
                 "setup_busy": self.setup_busy, "setup_msg": self.setup_msg, "error": self.error,
-                "screen_ok": self.screen_ok() if self.proc and self.proc.poll() is None else None,
+                "screen_ok": (reason == "ok") if reason else (self.screen_ok() if rec else None),
+                "screen_reason": reason or "", "screen_text": self.screen_text(reason),
                 "recordings": len(list(self.dir.glob("*.jsonl"))) if self.dir.exists() else 0}
 
     # ---------------------------------------------------------------- running
