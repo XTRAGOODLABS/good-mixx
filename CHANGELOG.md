@@ -5,6 +5,15 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.5.0 — November 18, 2026 · Bigger timeline, blend effects
+
+- **⤢ BIG** timeline: tall lanes (fills the window, song list panel hides), remembered between visits.
+- **Bar and beat lines** drawn on beat-matched songs when zoomed in, and a **volume line** showing each fade.
+- **◆ Blend handle:** drag it to make a blend longer or shorter - whole bars when beat-matched, half seconds otherwise.
+- **Blend effects** (FX picker per blend): **low-pass out** (outgoing song gets muffled), **high-pass out** (outgoing
+  song thins out), **high-pass in** (new song comes in thin and opens up), **bass swap** (bass handed over halfway).
+  Used in ▶ BLEND previews and the finished MP3 / WAV.
+
 ## v1.4.0 — November 18, 2026 · Set timing that follows your cues
 
 - **Set timing reads your djay cue points.** Each song starts from cue 1, or from the next cue in its first 90 s

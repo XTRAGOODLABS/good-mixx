@@ -253,7 +253,7 @@ def _clean_mix(m):
         if not isinstance(it, dict) or not it.get("title"):
             continue
         items.append({k: it.get(k) for k in ("sid", "title", "artist", "bpm", "key", "length", "tid", "set_start",
-                                             "blend", "cut_in", "cut_out", "nudge", "start_cue")
+                                             "blend", "cut_in", "cut_out", "nudge", "start_cue", "bars", "fade", "fx")
                       if it.get(k) not in (None, "") and not (k in ("cut_in", "cut_out", "nudge") and not it.get(k))})
     blend = m.get("blend") if m.get("blend") in ("beat", "set", "fade") else "beat"
     return {"id": str(m.get("id") or "")[:40], "name": str(m.get("name") or "New mix")[:80], "blend": blend,
