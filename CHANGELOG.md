@@ -5,6 +5,17 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.8.1 — November 18, 2026 · Recorder says why it can't read djay
+
+- When GOOD MIXX can't read djay's screen (song names, tempo, clock), the recorder now writes down **why** —
+  macOS blocking it, djay closed/hidden/minimized, or djay's window showing no decks — and the **REC ⚠** button
+  and its pop-up say what to do in plain words.
+- Most common fix after updating: in Accessibility, remove GOOD MIXX (−), add it again (+), then reopen GOOD MIXX.
+  Each update looks like a new app to macOS, so the old ON switch can stop counting.
+- **Clearer Traktor setup steps:** right-click → Open for the helper (double-click is blocked the first time),
+  what to expect when it asks for your password, and how to tell it worked.
+- **Check Traktor Link** now comes in the download and ends with a plain YES / NO list of what's missing.
+
 ## v1.8.0 — November 18, 2026 · Recorded sets rebuild in time
 
 Fixes from the first real recorded set:

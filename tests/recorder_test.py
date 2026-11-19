@@ -197,8 +197,22 @@ def main():
             print("audio parts skipped (no ffmpeg)")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    ax_reason_checks()
     print("recorder test passed")
 
+
+def ax_reason_checks():
+    import tempfile, pathlib
+    d = pathlib.Path(tempfile.mkdtemp())
+    r = recorder.Recorder(d)
+    f = d / "rec.jsonl"
+    f.write_text(json.dumps({"t":0,"k":"start","unix":1}) + "\n" +
+                 json.dumps({"t":0.2,"k":"ax","ok":False,"reason":"no-access","status":{"trusted":False}}) + "\n")
+    r.file = f
+    assert r.screen_reason() == "no-access"
+    assert "minus" in r.screen_text("no-access")
+    with open(f, "a") as h: h.write(json.dumps({"t":5,"k":"ax","ok":True,"reason":"ok"}) + "\n")
+    assert r.screen_reason() == "ok"
 
 if __name__ == "__main__":
     main()

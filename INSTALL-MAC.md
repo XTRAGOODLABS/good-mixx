@@ -9,9 +9,21 @@
 
 **djay:** allow GOOD MIXX in System Settings → Privacy & Security → **Accessibility** so it can read the key djay shows.
 
-**Traktor Pro 4 or 3:** quit Traktor, double-click **Add Traktor Link** (keep it next to the app), then in Traktor add
-Preferences → Controller Manager → Add… → Traktor → **Kontrol D2**. If the helper can't change Traktor's files,
-turn on Terminal under System Settings → Privacy & Security → **App Management**, quit Terminal and try again.
+**djay:** after updating GOOD MIXX, macOS may stop counting the Accessibility switch even though it shows ON.
+Select GOOD MIXX there, click **−**, click **+** and add it again, then reopen GOOD MIXX.
+
+**Traktor Pro 4 or 3 (one time):**
+1. Put GOOD MIXX in Applications and open it once.
+2. Quit Traktor completely.
+3. In the downloaded folder, **right-click "Add Traktor Link" → Open → Open** (double-clicking is blocked the first
+   time because it was downloaded). Type your Mac password if asked — it won't show as you type. Wait until it says done.
+   If it can't change Traktor's files: System Settings → Privacy & Security → **App Management** → turn on Terminal,
+   quit Terminal (⌘Q), and do step 3 again.
+4. In Traktor: Preferences → Controller Manager → Add… → Traktor → **Kontrol D2** (no D2 needed).
+5. Open GOOD MIXX and load a song in Traktor. **It worked if the song's name shows up in GOOD MIXX.**
+
+Not working? Right-click **Check Traktor Link** → Open → Open. It says what's missing and saves a report to
+`~/Library/Logs/GOOD MIXX traktor check.txt`. After a Traktor update, do step 3 again.
 **Remove Traktor Link** puts Traktor back exactly as it was.
 
 **STUDIO (optional):** building a finished MP3/WAV mix needs the free **ffmpeg**. With Homebrew, run
