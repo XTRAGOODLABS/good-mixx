@@ -30,10 +30,11 @@ Make a finished mix from your good mixes, or recreate a set you played on this M
 - Set timing (for recreated sets) starts each song from your djay cue 1 - or a later cue if cue 1 is an intro - and
   brings it in when you did, beat-matched. "Start:" under each song picks a different cue. REMOVE QUICK SKIPS drops
   songs you only played for a few seconds.
-- ⤢ BIG makes the timeline tall, with bar lines and a volume line. Drag the white diamond at the top of a blend to
-  make it longer or shorter. Each blend has an FX picker: low-pass out, high-pass out, high-pass in, bass swap.
+- ⤢ BIG makes the timeline tall, with bar lines and a volume line. Every song has its own white diamonds: one for how long
+  it fades in, one for how long it fades out. Its right edge sets how long it plays under the next song.
+  Changing one song never changes the other. Each blend has an FX picker: low-pass out, high-pass out, high-pass in, bass swap.
 - Move songs on the timeline: drag a song to bring it in earlier / later (beat-matched blends snap to bars, hold Option for beats).
-  Drag a song's right edge to end it sooner or later, its left edge to skip into it. ◂ ▸ nudge a bar, ↺ resets, UNDO undoes.
+  Drag a song's left edge to skip into it. ◂ ▸ nudge a bar, ↺ resets, UNDO undoes.
 - The timeline shows each song's wave. Press + / - to zoom. ▶ BLEND plays just that blend so you can hear it first.
 - BUILD MP3 / BUILD WAV saves the mix and a tracklist to your Music > GOOD MIXX folder.
   SAVE PLAYLIST saves a playlist (.m3u8) + tracklist you can load in your DJ app.

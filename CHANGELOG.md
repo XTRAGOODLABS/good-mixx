@@ -5,6 +5,13 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.6.0 — November 18, 2026 · Each song's fades are its own
+
+- Every song has its **own fade-in ◆ and fade-out ◆**. Dragging one changes only that song - the other song's
+  fade and position stay put. Snaps to beats on beat-matched songs (hold ⌥ for free).
+- A song's **right edge** now sets how long it keeps playing under the next song, without moving the next song.
+- Blend effects cover the whole overlap, whatever the fades. ↺ also resets fades and tails.
+
 ## v1.5.0 — November 18, 2026 · Bigger timeline, blend effects
 
 - **⤢ BIG** timeline: tall lanes (fills the window, song list panel hides), remembered between visits.
