@@ -78,6 +78,36 @@ def cue_checks(folder):
     assert pick["items"][1]["start_from"] == "beginning"
 
 
+def fx_checks(folder):
+    """Blend effects really filter the sound, only inside the blend; per-blend length works."""
+    noise = folder / "noise.mp3"
+    subprocess.run([studio.ffmpeg(), "-v", "quiet", "-y", "-f", "lavfi", "-i", "anoisesrc=d=60:c=pink:a=0.3", "-ac", "2",
+                    str(noise)], check=True)
+
+    def level(f, t, af):
+        o = subprocess.run([studio.ffmpeg(), "-hide_banner", "-ss", str(t), "-t", "3", "-i", str(f), "-af", af + ",volumedetect",
+                            "-f", "null", "-"], capture_output=True, text=True).stderr
+        return float(o.split("mean_volume:")[1].split("dB")[0])
+    for kind, side, band, drop in (("lp_out", "fx_out", "highpass=f=3000", True), ("hp_out", "fx_out", "lowpass=f=120", True),
+                                   ("hp_in", "fx_in", "lowpass=f=120", False)):
+        r = {"path": str(noise), "song_in": 0, "song_out": 60, "rate": 1.0, "dur": 60, "mix_start": 0, "fade_in": 0, "fade_out": 0,
+             side: {"kind": kind, "t0": 20, "t1": 40}}
+        out = folder / ("fx_%s.wav" % kind)
+        cmd = [c for c in studio.ffmpeg_command({"items": [r], "total": 60}, out, "wav") if c not in ("-progress", "pipe:1")]
+        subprocess.run(cmd, check=True, capture_output=True)
+        before, after = level(out, 8, band), level(out, 45, band)
+        assert (after < before - 20) if drop else (before < after - 20), (kind, before, after)
+    f = {t: str(folder / (t + ".mp3")) for t, _, _, _ in TRACKS}
+    mix = {"blend": "beat", "bars": 16, "items": [{"title": "Alpha", "path": f["Alpha"], "bpm": 120},
+                                                 {"title": "Bravo", "path": f["Bravo"], "bpm": 123, "bars": 4, "fx": "bass_swap"}]}
+    p = studio.plan(mix)
+    a, b = p["items"]
+    assert b["bars_used"] == 4 and abs(b["fade_in"] - 4 * 4 * 60 / 120) < 0.01, b
+    assert a["fx_out"]["kind"] == b["fx_in"]["kind"] == "bass_swap"
+    clip = studio.preview(p, 1, str(folder / "fxpreview.mp3"))
+    assert studio.duration(clip["path"]) > 10
+
+
 def check_beats(p, truth):
     for a, b in zip(p["items"], p["items"][1:]):
         assert b.get("beat_locked"), b
@@ -173,6 +203,7 @@ def main():
         make_tracks(folder)
         planner_checks(folder)
         cue_checks(folder)
+        fx_checks(folder)
         server_checks(tmp, folder)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

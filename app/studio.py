@@ -350,18 +350,20 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             continue
         want = r.get("blend") or blend_all
         used = want
+        bars_i = max(1, min(64, int(r.get("bars") or bars)))
+        fade_i = max(1.0, min(60.0, float(r.get("fade") or fade)))
         a = prev
         a_end = a["mix_start"] + (a["song_out"] - a["song_in"]) / a["rate"]
         if want == "set":
-            used = _set_blend(a, r, bars, fade, analyze)
+            used = _set_blend(a, r, bars_i, fade_i, analyze)
         if want == "beat":
-            applied, note = _beat_blend(a, r, bars, analyze)
+            applied, note = _beat_blend(a, r, bars_i, analyze)
             if not applied:
                 used = "fade"
             if note:
                 r.setdefault("warn", note)
         if used == "fade":
-            over = max(1.0, min(fade, (a["song_out"] - a["song_in"]) / a["rate"] / 2,
+            over = max(1.0, min(fade_i, (a["song_out"] - a["song_in"]) / a["rate"] / 2,
                                 (r["song_out"] - r["song_in"]) / 2))
             r["mix_start"] = a_end - over
             r["fade_in"] = over
@@ -377,6 +379,11 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             w = "%s: %s" % (r.get("title") or "?", r["warn"])
             if w not in warnings:
                 warnings.append(w)
+    for a, b in zip(use, use[1:]):
+        kind = b.get("fx")
+        if kind in FX and b.get("fade_in"):
+            w = {"kind": kind, "t0": b["mix_start"], "t1": b["mix_start"] + b["fade_in"]}
+            a["fx_out"], b["fx_in"] = dict(w), dict(w)
     if use:
         use[-1]["fade_out"] = max(use[-1]["fade_out"], min(3.0, use[-1]["dur"] / 4))
     total = max((r["mix_start"] + r["dur"] for r in use), default=0.0)
@@ -527,7 +534,7 @@ def _beat_blend(a, b, bars, analyze, at=None):
         return False, "tempos too far apart (%.0f vs %.0f BPM) - used a crossfade" % (eff, b["bpm"])
     ta, tb = 60.0 / a["bpm"], 60.0 / b_bpm
     a_len, b_len = a["song_out"] - a["song_in"], b["song_out"] - b["song_in"]
-    while bars > 2 and (bars * 4 * ta > a_len * 0.45 or bars * 4 * tb > b_len * 0.45):
+    while bars > 1 and (bars * 4 * ta > a_len * 0.45 or bars * 4 * tb > b_len * 0.45):
         bars //= 2
     blend_song_a = bars * 4 * ta                      # blend length in song A's own seconds
     if at is not None:                                 # set timing: start the blend when djay says
@@ -552,7 +559,10 @@ def _beat_blend(a, b, bars, analyze, at=None):
         b_in += tb * math.ceil((b["song_in"] - b_in) / tb)
     t_bs = a["mix_start"] + (s_bs - a["song_in"]) / a["rate"]
     over = blend_song_a / a["rate"]
-    b.update(mix_start=t_bs, song_in=b_in, rate=eff / b_bpm, fade_in=over, beat_locked=True)
+    b.update(mix_start=t_bs, song_in=b_in, rate=eff / b_bpm, fade_in=over, beat_locked=True, beat0=b_in, grid=tb,
+             bars_used=bars)
+    if pa is not None:
+        a.update(beat0=s_bs, grid=ta)
     _cut(a, t_bs + over)
     a["fade_out"] = over
     if analyze and not found:
@@ -573,6 +583,7 @@ def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix", clip=False):
         f = ["aresample=44100", "aformat=sample_fmts=fltp:channel_layouts=stereo"]
         if abs(r["rate"] - 1) > 1e-4:
             f.append("atempo=%.6f" % r["rate"])
+        f += fx_filters(r, i)
         dur = r["dur"]
         fi = min(r["fade_in"], dur) if r["fade_in"] else 0.02
         fo = min(r["fade_out"], dur) if r["fade_out"] else 0.02
@@ -593,6 +604,59 @@ def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix", clip=False):
             "-metadata", "artist=GOOD MIXX"]
     cmd += (["-c:a", "libmp3lame", "-b:a", "320k" if not clip else "160k"] if fmt == "mp3" else ["-c:a", "pcm_s16le"])
     return cmd + [str(out_path)]
+
+
+# ---------------------------------------------------------------- blend effects
+FX = {"lp_out": "Low-pass out", "hp_out": "High-pass out", "hp_in": "High-pass in", "bass_swap": "Bass swap"}
+
+
+def _sweep(name, f0, f1, t0, t1, steps):
+    out = []
+    for j in range(steps + 1):
+        t = t0 + (t1 - t0) * j / steps
+        out.append((t, "%s f %d" % (name, round(f0 * (f1 / f0) ** (j / steps)))))
+    return out
+
+
+def fx_filters(r, i):
+    """ffmpeg filters that sweep a high- or low-pass on this song during its blends (times are the song's own)."""
+    cmds, hp, lp = [], False, False
+    for side in ("fx_out", "fx_in"):
+        w = r.get(side)
+        if not w:
+            continue
+        t0, t1 = w["t0"] - r["mix_start"], w["t1"] - r["mix_start"]
+        if t1 <= 0:
+            continue
+        t0 = max(0.0, t0)
+        steps = max(8, min(48, int((t1 - t0) * 4)))
+        k = w["kind"]
+        if side == "fx_out" and k == "lp_out":
+            lp = True
+            cmds += _sweep("lowpass@lp%d" % i, 20000, 250, t0, t1, steps)
+        elif side == "fx_out" and k == "hp_out":
+            hp = True
+            cmds += _sweep("highpass@hp%d" % i, 20, 1000, t0, t1, steps)
+        elif side == "fx_in" and k == "hp_in":
+            hp = True
+            cmds += [(0.0, "highpass@hp%d f 1000" % i)] + _sweep("highpass@hp%d" % i, 1000, 20, t0, t1, steps)
+        elif k == "bass_swap":                      # incoming song without bass, then swap the bass at the halfway point
+            hp = True
+            mid = t0 + (t1 - t0) / 2
+            if side == "fx_in":
+                cmds += [(0.0, "highpass@hp%d f 250" % i), (mid, "highpass@hp%d f 20" % i)]
+            else:
+                cmds += [(mid, "highpass@hp%d f 250" % i)]
+    if not cmds:
+        return []
+    cmds.sort(key=lambda c: c[0])
+    script = ";".join("%.3f %s" % (t, c) for t, c in cmds)
+    out = ["asendcmd=c='%s'" % script]
+    if hp:
+        out.append("highpass@hp%d=f=20" % i)
+    if lp:
+        out.append("lowpass@lp%d=f=20000" % i)
+    return out
 
 
 def safe_name(name):
@@ -767,6 +831,9 @@ def clip_plan(p, t0, t1):
         if c["fade_in"] and new_start > start:          # started part-way into a fade-in: keep it short
             c["fade_in"] = min(c["fade_in"], 0.5)
         c["fade_out_at"] = (end - r["fade_out"]) - new_start if r["fade_out"] else None
+        for side in ("fx_out", "fx_in"):
+            if r.get(side):
+                c[side] = dict(r[side], t0=r[side]["t0"] - t0, t1=r[side]["t1"] - t0)
         items.append(c)
     return {"items": items, "total": t1 - t0}
 
