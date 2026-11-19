@@ -253,8 +253,24 @@ def beat_phase(env, bpm):
     return best
 
 
+_phases = {}
+
+
 def find_phase(path, start, length, bpm):
-    """Song time (seconds) of a beat near `start`, or None."""
+    """Song time (seconds) of a beat near `start`, or None. Remembered, so previews and rebuilds are quick."""
+    try:
+        stamp = os.stat(path).st_mtime
+    except OSError:
+        return None
+    key = (str(path), stamp, round(start, 2), round(length, 2), round(bpm, 3))
+    if key not in _phases:
+        _phases[key] = _find_phase(path, start, length, bpm)
+        if len(_phases) > 4000:
+            _phases.pop(next(iter(_phases)))
+    return _phases[key]
+
+
+def _find_phase(path, start, length, bpm):
     a = decode(path, start, length)
     if not a or len(a) < SR:
         return None
@@ -315,7 +331,8 @@ def plan(mix, finder=None, analyze=True, lengths=None):
         cout = min(cout, r["length"]) if r["length"] else cout
         if cout - cin < 8:
             cin, cout = 0.0, r["length"]
-        r.update(song_in=cin, song_out=cout, rate=1.0, fade_in=0.0, fade_out=0.0, blend_used="")
+        r.update(song_in=cin, song_out=cout, natural_out=cout, rate=1.0, fade_in=0.0, fade_out=0.0, blend_used="",
+                 nudge_used=0.0)
         if prev is None:
             r["mix_start"] = 0.0
             prev = r
@@ -353,6 +370,8 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             r["fade_in"] = over
             a["fade_out"] = over
         r["blend_used"] = used
+        if r.get("nudge"):
+            _nudge(a, r, float(r["nudge"]), used)
         prev = r
     for r in use:
         r["dur"] = (r["song_out"] - r["song_in"]) / r["rate"]
@@ -369,6 +388,33 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             r.update(mix_start=None, dur=0)
     return {"items": rows, "total": total, "warnings": warnings, "playable": len(playable),
             "preview_only": not playable}
+
+
+def _nudge(a, b, shift, used):
+    """Move song `b` in earlier (shift < 0) or later, by hand. Beat-matched blends move by whole beats
+    so the beats stay lined up; song `a` then ends where the new blend ends."""
+    if used == "beat" and a.get("bpm"):
+        beat = 60.0 / (a["bpm"] * a["rate"])
+        shift = round(shift / beat) * beat
+    else:
+        beat = 0.0
+    auto = b["mix_start"]
+    a_end = a["mix_start"] + (a["natural_out"] - a["song_in"]) / a["rate"]
+    start = auto + shift
+    lo, hi = a["mix_start"] + 2.0, a_end - 1.0
+    if start < lo:
+        start = start + beat * math.ceil((lo - start) / beat) if beat else lo
+    if start > hi:
+        start = start - beat * math.ceil((start - hi) / beat) if beat else hi
+    if hi < lo:
+        return
+    over = max(0.5, min(b["fade_in"] or 0.5, a_end - start))
+    b["mix_start"] = start
+    b["fade_in"] = over
+    b["nudge_used"] = start - auto
+    a["song_out"] = a["natural_out"]
+    _cut(a, start + over)
+    a["fade_out"] = over
 
 
 def _cut(a, mix_time):
@@ -417,7 +463,7 @@ def _beat_blend(a, b, bars, analyze):
 
 
 # ---------------------------------------------------------------- building the audio
-def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix"):
+def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix", clip=False):
     ff = ffmpeg()
     use = [r for r in p["items"] if r.get("mix_start") is not None and r.get("path")]
     if not ff or not use:
@@ -433,17 +479,21 @@ def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix"):
         fi = min(r["fade_in"], dur) if r["fade_in"] else 0.02
         fo = min(r["fade_out"], dur) if r["fade_out"] else 0.02
         f.append("afade=t=in:st=0:d=%.4f:curve=qsin" % fi)
-        f.append("afade=t=out:st=%.4f:d=%.4f:curve=qsin" % (max(0.0, dur - fo), fo))
+        at = r["fade_out_at"] if r.get("fade_out_at") is not None else dur - fo
+        f.append("afade=t=out:st=%.4f:d=%.4f:curve=qsin" % (max(0.0, at), fo))
         ms = int(round(r["mix_start"] * 1000))
         if ms > 0:
             f.append("adelay=delays=%d:all=1" % ms)
         chains.append("[%d:a]%s[a%d]" % (i, ",".join(f), i))
     ins = "".join("[a%d]" % i for i in range(len(use)))
-    chains.append("%samix=inputs=%d:normalize=0:dropout_transition=0,alimiter=limit=0.95:level=0[out]"
-                  % (ins, len(use)))
+    tail = ""
+    if clip:                                   # short preview: soft start and end, no clicks
+        tail = ",afade=t=in:st=0:d=0.3,afade=t=out:st=%.3f:d=0.6" % max(0.0, p["total"] - 0.6)
+    chains.append("%samix=inputs=%d:normalize=0:dropout_transition=0,alimiter=limit=0.95:level=0%s[out]"
+                  % (ins, len(use), tail))
     cmd += ["-filter_complex", ";".join(chains), "-map", "[out]", "-ar", "44100", "-metadata", "title=" + title,
             "-metadata", "artist=GOOD MIXX"]
-    cmd += ["-c:a", "libmp3lame", "-b:a", "320k"] if fmt == "mp3" else ["-c:a", "pcm_s16le"]
+    cmd += (["-c:a", "libmp3lame", "-b:a", "320k" if not clip else "160k"] if fmt == "mp3" else ["-c:a", "pcm_s16le"])
     return cmd + [str(out_path)]
 
 
@@ -550,3 +600,107 @@ class Renderer:
                 self.proc.terminate()
                 return True
         return False
+
+
+# ---------------------------------------------------------------- song waves
+WAVE_POINTS_PER_SEC = 10
+
+
+def wave(path, cache_dir):
+    """The loudness shape of a song: 10 values a second, 0-255. Cached next to your mixes."""
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    import hashlib
+    name = hashlib.sha1(("%s|%s|%s" % (path, st.st_mtime, st.st_size)).encode()).hexdigest()[:20] + ".json"
+    f = Path(cache_dir) / name
+    try:
+        return json.loads(f.read_text())
+    except (OSError, ValueError):
+        pass
+    ff = ffmpeg()
+    if not ff:
+        return None
+    rate = 2000
+    try:
+        raw = subprocess.run([ff, "-v", "quiet", "-i", str(path), "-ac", "1", "-ar", str(rate), "-f", "s16le", "-"],
+                             capture_output=True, timeout=120).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    a = array("h")
+    a.frombytes(raw[: len(raw) // 2 * 2])
+    if array("h", [1]).tobytes() != b"\x01\x00":
+        a.byteswap()
+    step = rate // WAVE_POINTS_PER_SEC
+    peaks = []
+    for i in range(0, len(a), step):
+        chunk = a[i:i + step]
+        peaks.append(max(max(chunk), -min(chunk)) if chunk else 0)
+    top = max(peaks) if peaks else 0
+    out = {"rate": WAVE_POINTS_PER_SEC, "length": len(a) / rate,
+           "peaks": [int(v * 255 / top) if top else 0 for v in peaks]}
+    try:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(out, separators=(",", ":")))
+    except OSError:
+        pass
+    return out
+
+
+# ---------------------------------------------------------------- blend previews
+def clip_plan(p, t0, t1):
+    """The part of a planned mix between t0 and t1 (mix seconds), ready for ffmpeg_command."""
+    items = []
+    for r in p["items"]:
+        if r.get("mix_start") is None or not r.get("path"):
+            continue
+        start, end = r["mix_start"], r["mix_start"] + r["dur"]
+        if end <= t0 or start >= t1:
+            continue
+        c = dict(r)
+        new_start = max(start, t0)
+        c["song_in"] = r["song_in"] + (new_start - start) * r["rate"]
+        new_end = min(end, t1)
+        c["song_out"] = c["song_in"] + (new_end - new_start) * r["rate"]
+        c["mix_start"] = new_start - t0
+        c["dur"] = new_end - new_start
+        c["fade_in"] = max(0.0, r["fade_in"] - (new_start - start)) if r["fade_in"] else 0.0
+        if c["fade_in"] and new_start > start:          # started part-way into a fade-in: keep it short
+            c["fade_in"] = min(c["fade_in"], 0.5)
+        c["fade_out_at"] = (end - r["fade_out"]) - new_start if r["fade_out"] else None
+        items.append(c)
+    return {"items": items, "total": t1 - t0}
+
+
+def blend_window(p, index, lead=8.0, tail=8.0):
+    """Mix seconds around the blend into song `index`: a little before it starts to a little after the last one ends."""
+    r = p["items"][index]
+    if r.get("mix_start") is None:
+        return None
+    prev = None
+    for q in p["items"][:index][::-1]:
+        if q.get("mix_start") is not None:
+            prev = q
+            break
+    if prev is None:
+        return max(0.0, r["mix_start"]), r["mix_start"] + min(r["dur"], 30.0)
+    end = prev["mix_start"] + prev["dur"]
+    t0 = max(0.0, r["mix_start"] - lead)
+    return t0, min(max(end, r["mix_start"] + 4) + tail, t0 + 180)
+
+
+def preview(p, index, out_path):
+    """Build a short MP3 of one blend. Returns the path, or raises with a reason."""
+    win = blend_window(p, index)
+    if not win:
+        raise RuntimeError("This song isn't in the audio mix (no file on this Mac).")
+    cp = clip_plan(p, *win)
+    cmd = ffmpeg_command(cp, out_path, "mp3", "GOOD MIXX preview", clip=True)
+    if not cmd:
+        raise RuntimeError("Hearing a blend needs ffmpeg." if not ffmpeg() else "Nothing to play here.")
+    cmd = [c for c in cmd if c not in ("-progress", "pipe:1")]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if r.returncode != 0 or not Path(out_path).exists():
+        raise RuntimeError("ffmpeg stopped: " + ((r.stderr or "").strip().splitlines() or ["unknown error"])[-1][:300])
+    return {"path": str(out_path), "start": win[0], "end": win[1]}

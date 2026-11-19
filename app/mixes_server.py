@@ -65,6 +65,18 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
+def app_version():
+    """The version in GOOD MIXX.app's Info.plist (blank when run from source)."""
+    import plistlib
+    from pathlib import Path
+    plist = Path(__file__).resolve().parents[2] / "Info.plist"
+    try:
+        with open(plist, "rb") as f:
+            return str(plistlib.load(f).get("CFBundleShortVersionString", ""))
+    except (OSError, ValueError, plistlib.InvalidFileException):
+        return ""
+
+
 def local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -87,7 +99,7 @@ def main():
     if not name.endswith(".local"):
         name += ".local"
     ip = local_ip()
-    mixes.INFO.update(port=PORT, host=name, ip=ip,
+    mixes.INFO.update(port=PORT, host=name, ip=ip, version=app_version(),
                       ipad="http://%s:%d/mixes" % (ip or name, PORT))
     now = mixes._now()
     print("")

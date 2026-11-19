@@ -253,16 +253,88 @@ def _clean_mix(m):
         if not isinstance(it, dict) or not it.get("title"):
             continue
         items.append({k: it.get(k) for k in ("sid", "title", "artist", "bpm", "key", "length", "tid", "set_start",
-                                             "blend", "cut_in", "cut_out") if it.get(k) not in (None, "")})
+                                             "blend", "cut_in", "cut_out", "nudge") if it.get(k) not in (None, "", 0)})
     blend = m.get("blend") if m.get("blend") in ("beat", "set", "fade") else "beat"
     return {"id": str(m.get("id") or "")[:40], "name": str(m.get("name") or "New mix")[:80], "blend": blend,
             "bars": int(m.get("bars") or 16), "fade": float(m.get("fade") or 12), "source": str(m.get("source") or "")[:80],
             "items": items}
 
 
+def _send_file(h, f, ctype):
+    """Send a file, honouring Range requests (Safari / the Mac app need them to play and seek audio)."""
+    size = os.path.getsize(f)
+    start, end, code = 0, size - 1, 200
+    rng = h.headers.get("Range", "")
+    m = re.match(r"bytes=(\d*)-(\d*)$", rng.strip())
+    if m and size:
+        if m.group(1):
+            start = int(m.group(1))
+            end = int(m.group(2)) if m.group(2) else size - 1
+        elif m.group(2):
+            start = max(0, size - int(m.group(2)))
+        end = min(end, size - 1)
+        if start > end:
+            h.send_response(416)
+            h.send_header("Content-Range", "bytes */%d" % size)
+            h.end_headers()
+            return True
+        code = 206
+    h.send_response(code)
+    h.send_header("Content-Type", ctype)
+    h.send_header("Accept-Ranges", "bytes")
+    h.send_header("Content-Length", str(end - start + 1))
+    h.send_header("Cache-Control", "no-store")
+    if code == 206:
+        h.send_header("Content-Range", "bytes %d-%d/%d" % (start, end, size))
+    h.end_headers()
+    with open(f, "rb") as fh:
+        fh.seek(start)
+        left = end - start + 1
+        while left > 0:
+            chunk = fh.read(min(65536, left))
+            if not chunk:
+                break
+            try:
+                h.wfile.write(chunk)
+            except (BrokenPipeError, ConnectionResetError):
+                break
+            left -= len(chunk)
+    return True
+
+
+PREVIEWS = DATA / "previews"
+
+
+def _audio_type(f):
+    return {".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4"}.get(Path(f).suffix.lower(), "application/octet-stream")
+
+
 def _studio_get(h, path):
     if not _local(h):
         return _send(h, 403, {"error": "STUDIO works in the GOOD MIXX window on the Mac"})
+    from urllib.parse import parse_qs, urlsplit
+    q = {k: v[0] for k, v in parse_qs(urlsplit(h.path).query).items()}
+    if path == "/api/studio/wave":
+        f = q.get("p", "")
+        if not f.lower().endswith(studio.AUDIO_EXT) or not os.path.isfile(f):
+            return _send(h, 404, {"error": "not found"})
+        w = studio.wave(f, DATA / "waves")
+        return _send(h, 200, w) if w else _send(h, 404, {"error": "no wave (needs ffmpeg)"})
+    if path == "/api/studio/audio":
+        name = q.get("f", "")
+        if name:                                        # a blend preview
+            f = PREVIEWS / name
+            if "/" in name or ".." in name or not f.is_file():
+                return _send(h, 404, {"error": "not found"})
+        else:                                           # a finished mix in Music/GOOD MIXX
+            f = Path(q.get("p", ""))
+            try:
+                ok = f.is_file() and f.resolve().parent == studio.OUT_DIR.resolve()
+            except OSError:
+                ok = False
+            if not ok:
+                return _send(h, 404, {"error": "not found"})
+        return _send_file(h, str(f), _audio_type(f))
     if path == "/api/studio/info":
         return _send(h, 200, _studio_info())
     if path == "/api/studio/sets":
@@ -273,6 +345,13 @@ def _studio_get(h, path):
 
 
 def _studio_post(h, path, raw):
+    try:
+        return _studio_post_inner(h, path, raw)
+    except Exception as e:                       # show the reason in the window instead of hanging
+        return _send(h, 500, {"error": "%s: %s" % (type(e).__name__, e)})
+
+
+def _studio_post_inner(h, path, raw):
     if not _local(h):
         return _send(h, 403, {"error": "STUDIO works in the GOOD MIXX window on the Mac"})
     msg = json.loads(raw or b"{}")
@@ -305,6 +384,34 @@ def _studio_post(h, path, raw):
         if not _render.start(p, mix["name"], fmt):
             return _send(h, 200, {"state": "error", "msg": "Already building a mix - wait for it to finish."})
         return _send(h, 200, _render.status)
+    if path == "/api/studio/preview":
+        import hashlib
+        mix = _clean_mix(msg.get("mix") or {})
+        index = int(msg.get("index") or 0)
+        if not 0 < index < len(mix["items"]):
+            return _send(h, 400, {"error": "pick a song after the first one"})
+        p = studio.plan(mix, _finder, analyze=True)
+        PREVIEWS.mkdir(parents=True, exist_ok=True)
+        old = sorted(PREVIEWS.glob("*.mp3"), key=lambda x: x.stat().st_mtime)
+        for f in old[:-40]:                             # keep the folder small
+            try:
+                f.unlink()
+            except OSError:
+                pass
+        sig = json.dumps([[r.get("path"), round(r.get("mix_start") or 0, 3), round(r.get("rate") or 1, 5),
+                           round(r.get("song_in") or 0, 3), round(r.get("song_out") or 0, 3), r.get("fade_in"), r.get("fade_out")]
+                          for r in p["items"][max(0, index - 1):index + 2]] + [index])
+        name = hashlib.sha1(sig.encode()).hexdigest()[:20] + ".mp3"
+        f = PREVIEWS / name
+        win = studio.blend_window(p, index)
+        if not f.exists():
+            try:
+                studio.preview(p, index, f)
+            except RuntimeError as e:
+                return _send(h, 200, {"error": str(e)})
+        item = p["items"][index]
+        return _send(h, 200, {"url": "/api/studio/audio?f=" + name, "start": win[0] if win else 0,
+                              "blend_at": item.get("mix_start"), "blend_used": item.get("blend_used"), "warn": item.get("warn", "")})
     if path == "/api/studio/cancel":
         _render.cancel()
         return _send(h, 200, _render.status)
@@ -387,7 +494,12 @@ def handle_get(h):
     if path == "/api/djay/sessions":
         return _send(h, 200, _sessions())
     if path.startswith("/api/studio/"):
-        return _studio_get(h, path)
+        try:
+            return _studio_get(h, path)
+        except (BrokenPipeError, ConnectionResetError):
+            return True
+        except Exception as e:
+            return _send(h, 500, {"error": "%s: %s" % (type(e).__name__, e)})
     return False
 
 

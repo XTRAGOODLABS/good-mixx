@@ -10,7 +10,7 @@ A booth companion from **Crate OS by XTRA GOOD LABS** for **djay** and **Traktor
 with your iPad as the second screen. Original idea by **DJ Aquarobotics**.
 
 [![Checks](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml/badge.svg)](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml)
-[![Mac app](https://img.shields.io/badge/Mac_app-v1.1.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
+[![Mac app](https://img.shields.io/badge/Mac_app-v1.3.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
 ![Platform](https://img.shields.io/badge/tested_on-macOS-b79ae6?style=flat-square)
 
 [**Download for Mac**](https://github.com/XTRAGOODLABS/good-mixx/releases/latest) · [**Install guide**](INSTALL-MAC.md) · [**Version history**](CHANGELOG.md) · [**What's next**](ROADMAP.md)
@@ -36,6 +36,11 @@ In the GOOD MIXX window on the Mac, the **STUDIO** tab builds a mix in the spiri
 - **Three blend styles**, for the whole mix or song by song: **beat-matched** (tempo matched with the pitch kept,
   beats lined up, blended over 8/16/32 bars), **your set's timing** (each song comes in when it did in the real set),
   or a **simple crossfade**.
+- **Song waves on the timeline**, with zoom, so you can see each song, its blends and fades.
+- **Move the audio around:** drag a song to bring it in earlier or later (beat-matched blends snap to whole bars,
+  hold ⌥ for single beats), drag its right edge to end it sooner or later, drag its left edge to skip into it.
+  ◂ ▸ nudge by a bar, ↺ puts it back, UNDO / ⌘Z undoes.
+- **▶ BLEND** plays just that blend (built the same way as the full mix) with a moving playhead; **▶ PLAY** plays the finished mix.
 - **BUILD MP3 / WAV** saves the finished mix plus a timed tracklist to `Music/GOOD MIXX`.
   **SAVE PLAYLIST** saves an `.m3u8` playlist and tracklist to load and play live.
 
@@ -63,7 +68,8 @@ python3 tests/studio_test.py       # STUDIO: beat matching, set timing, building
 bash scripts/package-mac.sh        # builds dist/GOOD MIXX/ and the release zip
 ```
 
-Needs Python 3 (macOS developer tools include it). `GOODMIXX_DATA` sets where mixes and history are kept.
+Needs Python 3 (macOS developer tools include it). The Mac app window (`macos/GoodMixxApp.swift`) is built by GitHub
+on a Mac for every change and published with each release; `scripts/package-mac.sh` without it falls back to a browser window. `GOODMIXX_DATA` sets where mixes and history are kept.
 
 ## Credits
 

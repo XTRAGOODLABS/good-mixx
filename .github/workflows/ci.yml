@@ -16,3 +16,52 @@ jobs:
       - run: python tests/studio_test.py
       - run: bash -n macos/launcher.sh extras/*.command scripts/package-mac.sh
       - run: bash scripts/package-mac.sh
+
+  mac-app:
+    # Builds the real Mac app (its own window, no browser) on one of GitHub's Macs, opens it to make sure it
+    # starts and quits cleanly, and publishes the download when main changes.
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the app window (Apple silicon + Intel)
+        run: |
+          mkdir -p build
+          swiftc -parse-as-library -O -target arm64-apple-macos11.0 macos/GoodMixxApp.swift -o build/gm-arm64
+          swiftc -parse-as-library -O -target x86_64-apple-macos11.0 macos/GoodMixxApp.swift -o build/gm-x86_64
+          lipo -create build/gm-arm64 build/gm-x86_64 -output build/GOODMIXX
+          lipo -info build/GOODMIXX
+      - name: Package
+        run: GM_NATIVE="$PWD/build/GOODMIXX" bash scripts/package-mac.sh
+      - name: Open it, check it answers, quit it
+        run: |
+          APPDIR="$PWD/dist/GOOD MIXX/GOOD MIXX.app"
+          export GOODMIXX_DATA="$RUNNER_TEMP/gmdata"
+          open "$APPDIR"
+          for i in $(seq 1 60); do curl -s -m 1 http://localhost:8770/api/info | grep -q '"ipad"' && break; sleep 1; done
+          curl -s http://localhost:8770/api/info
+          V=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" macos/Info.plist)
+          curl -s http://localhost:8770/api/info | grep -q "\"version\": \"$V\""
+          curl -s http://localhost:8770/api/studio/info | grep -q '"mixes"'
+          pgrep -x "GOOD MIXX"
+          osascript -e 'tell application "GOOD MIXX" to quit'
+          for i in $(seq 1 20); do curl -s -m 1 http://localhost:8770/api/info >/dev/null || break; sleep 0.5; done
+          if curl -s -m 1 http://localhost:8770/api/info >/dev/null; then echo "helper still running after quit"; exit 1; fi
+          echo "app started, answered and quit cleanly"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GOOD-MIXX-macOS
+          path: dist/*.zip
+      - name: Publish the download (main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" macos/Info.plist)
+          if gh release view "v$V" >/dev/null 2>&1; then
+            gh release upload "v$V" dist/*.zip --clobber
+          else
+            awk -v v="## v$V " 'index($0, v)==1{f=1;next} /^## v/{f=0} f' CHANGELOG.md > notes.md
+            gh release create "v$V" dist/*.zip --title "GOOD MIXX $V" --notes-file notes.md
+          fi

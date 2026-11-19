@@ -5,6 +5,30 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.3.0 — November 18, 2026 · Move the audio around
+
+- STUDIO timeline: **drag a song** to bring it in earlier or later. Beat-matched blends snap to whole bars
+  (hold ⌥ for single beats) so the beats stay lined up; the song before it ends where the new blend ends.
+- **Drag a song's right edge** to end it sooner or later (moves the next song with it); **drag its left edge** to
+  skip into the song. A tip shows how far you've moved it.
+- **◂ ▸** nudge a song by a bar (or a second), **↺** puts it back, **UNDO** / ⌘Z undoes timeline changes.
+- Moves are saved with the mix and used for blend previews and the finished MP3 / WAV.
+
+## v1.2.0 — November 18, 2026 · Own window, song waves, blend previews
+
+- **GOOD MIXX is a real Mac app now:** its own window and menus (copy/paste, zoom, full screen), no browser.
+  Built by GitHub on a Mac for every change, for Apple silicon and Intel. Quitting GOOD MIXX stops it, iPad screen included.
+- **STUDIO song waves:** each song's wave drawn on the timeline, with its fades, plus zoom in / out / fit.
+- **▶ BLEND** builds and plays just one blend (same beat-matching as the full mix) with a moving playhead.
+  **▶ PLAY** plays a finished mix; click the timeline to jump.
+- Audio is served with byte ranges so it plays and seeks in Safari and the Mac app.
+
+## v1.1.1 — November 18, 2026
+
+- After an update, opening GOOD MIXX now stops the old copy still running in the background and starts the new
+  one. Before, the old copy kept answering, so STUDIO showed but never worked out the mix.
+- STUDIO says what went wrong (with TRY AGAIN) instead of waiting forever.
+
 ## v1.1.0 — November 18, 2026 · STUDIO
 
 - New **STUDIO** tab in the Mac window: turn your good mixes into a finished mix, or recreate a set you played

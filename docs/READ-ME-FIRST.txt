@@ -7,7 +7,7 @@ START
    If your Mac says it can't check the app: right-click GOOD MIXX > Open > Open.
    (On newer macOS: System Settings > Privacy & Security > scroll down > Open Anyway.)
 2. The first time, your Mac may ask to install Apple's free developer tools - click Install, then open GOOD MIXX again.
-3. A GOOD MIXX window opens. The start screen shows the address to type on your iPad
+3. GOOD MIXX opens in its own window (quitting GOOD MIXX also stops the iPad screen). The start screen shows the address to type on your iPad
    (iPad and Mac on the same Wi-Fi).
 4. Play. Tap GOOD MIX when two songs blend well. Suggestions show your proven mixes first, then BPM + key matches.
 
@@ -27,6 +27,9 @@ STUDIO (in the GOOD MIXX window on the Mac)
 Make a finished mix from your good mixes, or recreate a set you played on this Mac.
 - PAST SETS > RECREATE THIS SET, or add songs from MY MIXES / SONGS.
 - Pick how songs blend: Beat-matched, Set timing (like you played it) or Crossfade - for the whole mix or per song.
+- Move songs on the timeline: drag a song to bring it in earlier / later (beat-matched blends snap to bars, hold Option for beats).
+  Drag a song's right edge to end it sooner or later, its left edge to skip into it. ◂ ▸ nudge a bar, ↺ resets, UNDO undoes.
+- The timeline shows each song's wave. Press + / - to zoom. ▶ BLEND plays just that blend so you can hear it first.
 - BUILD MP3 / BUILD WAV saves the mix and a tracklist to your Music > GOOD MIXX folder.
   SAVE PLAYLIST saves a playlist (.m3u8) + tracklist you can load in your DJ app.
 - Only songs saved as files on this Mac go into the audio (streamed songs are left out). FIND lets you point to a file.

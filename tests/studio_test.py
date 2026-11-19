@@ -1,7 +1,7 @@
 """STUDIO check: makes three beat tracks, plays them as a Traktor set, then recreates the set in STUDIO,
 plans a beat-matched mix, checks the beats line up, builds the MP3 and exports the playlist.
 Needs ffmpeg (skips the audio parts without it). Run: python3 tests/studio_test.py"""
-import json, os, shutil, socket, subprocess, sys, tempfile, time, urllib.request
+import json, os, shutil, socket, subprocess, sys, tempfile, time, urllib.parse, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,8 +32,26 @@ def collection(home, folder):
 def planner_checks(folder):
     mix = {"blend": "beat", "bars": 16, "items": [{"title": t, "path": str(folder / (t + ".mp3")), "bpm": b}
                                                  for t, b, _, _ in TRACKS]}
-    p = studio.plan(mix)
+    moved = dict(mix, items=[dict(it) for it in mix["items"]])
+    moved["items"][1]["nudge"] = -16.3                   # dragged in earlier by hand
+    auto = studio.plan(mix)["items"][1]["mix_start"]
     truth = {t: (b, f) for t, b, f, _ in TRACKS}
+    for p in (studio.plan(mix), studio.plan(moved)):
+        check_beats(p, truth)
+    shifted = studio.plan(moved)["items"][1]
+    beat = 60 / 120.0
+    assert shifted["mix_start"] < auto and abs(shifted["nudge_used"] / beat - round(shifted["nudge_used"] / beat)) < 1e-6
+    p = studio.plan(mix)
+    clip = studio.preview(p, 1, str(folder / "preview.mp3"))
+    assert 30 < studio.duration(clip["path"]) < 90, clip
+    for blend in ("set", "fade"):
+        q = studio.plan(dict(mix, blend=blend, items=[dict(it, set_start=1000 + 80 * i) for i, it in enumerate(mix["items"])]))
+        assert all(r["blend_used"] == blend for r in q["items"][1:]), (blend, q["items"])
+    missing = studio.plan({"items": mix["items"][:1] + [{"title": "Nowhere", "length": 200}]})
+    assert missing["playable"] == 1 and missing["items"][1]["skip"] and missing["warnings"]
+
+
+def check_beats(p, truth):
     for a, b in zip(p["items"], p["items"][1:]):
         assert b["blend_used"] == "beat", b
 
@@ -50,11 +68,6 @@ def planner_checks(folder):
         end = a["mix_start"] + a["dur"]
         worst = max(min(abs(x - y) for y in ba) for x in bb if b["mix_start"] <= x <= end)
         assert worst < 0.012, "beats off by %.1f ms in %s -> %s" % (worst * 1000, a["title"], b["title"])
-    for blend in ("set", "fade"):
-        q = studio.plan(dict(mix, blend=blend, items=[dict(it, set_start=1000 + 80 * i) for i, it in enumerate(mix["items"])]))
-        assert all(r["blend_used"] == blend for r in q["items"][1:]), (blend, q["items"])
-    missing = studio.plan({"items": mix["items"][:1] + [{"title": "Nowhere", "length": 200}]})
-    assert missing["playable"] == 1 and missing["items"][1]["skip"] and missing["warnings"]
 
 
 def call(port, path, data=None):
@@ -95,6 +108,13 @@ def server_checks(tmp, folder):
         p = call(port, "/api/studio/plan", {"mix": mix})
         assert p["playable"] == 3, p["warnings"]
         assert [r["blend_used"] for r in p["items"]] == ["", "beat", "beat"], p["items"]
+        wave = call(port, "/api/studio/wave?p=" + urllib.parse.quote(p["items"][0]["path"]))
+        assert wave["rate"] == 10 and len(wave["peaks"]) > 900 and max(wave["peaks"]) == 255
+        pv = call(port, "/api/studio/preview", {"mix": mix, "index": 1})
+        assert pv.get("url") and pv["blend_used"] == "beat", pv
+        req = urllib.request.Request("http://localhost:%d%s" % (port, pv["url"]), headers={"Range": "bytes=0-99"})
+        with urllib.request.urlopen(req, timeout=10) as r:      # Safari / the Mac app need byte ranges to play audio
+            assert r.status == 206 and r.headers["Content-Range"].startswith("bytes 0-99/") and len(r.read()) == 100
         ex = call(port, "/api/studio/export", {"mix": mix})
         assert Path(ex["playlist"]).read_text().count(str(folder)) == 3 and Path(ex["tracklist"]).exists()
         st = call(port, "/api/studio/render", {"mix": mix, "format": "mp3"})
@@ -105,6 +125,9 @@ def server_checks(tmp, folder):
             st = call(port, "/api/studio/render")
         assert st["state"] == "done", st
         assert abs(studio.duration(st["out"]) - st["total"]) < 1.5 and Path(st["tracklist"]).exists()
+        with urllib.request.urlopen("http://localhost:%d/api/studio/audio?p=%s" % (port, urllib.parse.quote(st["out"])),
+                                    timeout=10) as r:
+            assert r.status == 200 and r.headers["Content-Type"] == "audio/mpeg"
         call(port, "/api/studio/delete", {"id": saved["mix"]["id"]})
         assert call(port, "/api/studio/info")["mixes"] == []
     finally:
