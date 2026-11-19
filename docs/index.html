@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOOD MIXX</title>
+<meta name="description" content="Free Mac companion for DJAY Pro and TRAKTOR that remembers the blends that work and suggests what to play next.">
+<meta property="og:title" content="GOOD MIXX: remember the blends that work">
+<meta property="og:description" content="Free Mac companion for DJAY Pro + TRAKTOR. Tap GOOD MIX when a blend works; it suggests what to play next. Looking for 5 testers.">
+<meta property="og:image" content="https://xtragoodlabs.github.io/good-mixx/screenshots/live.png">
+<meta property="og:url" content="https://xtragoodlabs.github.io/good-mixx/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="screenshots/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: booth-dark single column, deck-style panels, one orange GOOD MIX accent like the app */
+:root{
+  --bg:#111318;
+  --panel:#181b22;
+  --line:#2a2f3a;
+  --ink:#eef0f4;
+  --muted:#9aa1ad;
+  --accent:#e8620c;
+  --deckb:#f0b35a;
+  --font-display:"Anton", "Impact", "Arial Narrow", sans-serif;
+  --font-body:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:17px;line-height:1.55}
+a{color:inherit}
+img{max-width:100%;display:block}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+header{border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:14px;padding-bottom:14px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:40px;height:40px;border-radius:9px}
+.brand b{font-family:var(--font-display);font-size:24px;font-weight:400;letter-spacing:.02em}
+.hero{padding:56px 0 40px;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
+h1{font-family:var(--font-display);font-weight:400;font-size:clamp(44px,7vw,76px);line-height:1;margin:14px 0 18px;text-wrap:balance;letter-spacing:.01em}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{color:#c9cdd5;max-width:34em;margin:0 0 26px}
+.ctas{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-weight:700;border-radius:10px;padding:15px 22px;font-size:16px;border:1px solid var(--line)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1a0d03;box-shadow:0 0 28px rgba(232,98,12,.35)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:var(--panel)}
+.btn.ghost:hover{border-color:var(--muted)}
+.btn:focus-visible{outline:3px solid var(--deckb);outline-offset:3px}
+.fine{margin-top:12px;font-size:14px;color:var(--muted)}
+.decks{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch}
+.deck{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.deck.a{border-bottom:2px solid #6aa0ff}
+.deck.b{border-color:var(--deckb)}
+.deck .t{font-weight:700;font-size:17px;margin-top:6px;line-height:1.25}
+.deck .s{color:var(--muted);font-size:14px}
+.chip{display:inline-block;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);border-radius:5px;padding:2px 6px;margin-top:8px;font-variant-numeric:tabular-nums}
+.gm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.gm span:first-child{background:var(--accent);color:#1a0d03;font-family:var(--font-mono);font-weight:600;letter-spacing:.12em;border-radius:10px;padding:18px 14px;text-align:center;line-height:1.3;box-shadow:0 0 22px rgba(232,98,12,.45)}
+.saved{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:14px}
+.saved b{color:var(--deckb);font-family:var(--font-mono);font-weight:600;font-size:12px;letter-spacing:.1em}
+section{padding:44px 0;border-top:1px solid var(--line)}
+h2{font-family:var(--font-display);font-weight:400;font-size:clamp(30px,4.4vw,42px);line-height:1.05;margin:8px 0 22px;text-wrap:balance;letter-spacing:.01em}
+.shot{border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.cap{margin-top:10px;color:var(--muted);font-size:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card h3{margin:6px 0 6px;font-size:18px}
+.card p{margin:0;color:#c9cdd5;font-size:15px}
+ol.steps{list-style:none;margin:0;padding:0;display:grid;gap:10px;counter-reset:s}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:44px 1fr;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+ol.steps li::before{content:counter(s);font-family:var(--font-display);font-size:30px;line-height:1;color:var(--accent)}
+ol.steps b{display:block}
+ol.steps span{color:#c9cdd5;font-size:15px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+ul.req{margin:0;padding-left:18px;color:#c9cdd5}
+ul.req li{margin:4px 0}
+.ask{background:linear-gradient(0deg,rgba(232,98,12,.10),rgba(232,98,12,.10)),var(--panel);border:1px solid rgba(232,98,12,.5);border-radius:16px;padding:26px}
+.ask p{margin:0 0 18px;max-width:40em}
+code{font-family:var(--font-mono);font-size:13px;background:#0c0e12;border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+footer{padding:26px 0 40px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;padding-top:36px}
+  .grid3,.two{grid-template-columns:1fr}
+}
+@media (max-width:440px){
+  .decks{grid-template-columns:1fr}
+  .gm{flex-direction:row}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand"><img src="screenshots/icon.png" alt="GOOD MIXX icon"><b>GOOD MIXX</b></div>
+    <span class="label">Beta · Mac</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <div class="label">For DJAY Pro + TRAKTOR on Mac</div>
+      <h1>Remember the blends that <em>work.</em></h1>
+      <p class="lede">Ever nail a transition and then forget which two tracks did it? GOOD MIXX follows what you're playing in DJAY or TRAKTOR. Tap <b>GOOD MIX</b> when a blend lands, and next time it puts your proven pairs at the top of what to play next. After the gig, record and rebuild your set in STUDIO and export it as a finished mix.</p>
+      <div class="ctas">
+        <a class="btn primary" href="https://github.com/XTRAGOODLABS/good-mixx/releases/latest">Download for Mac</a>
+        <a class="btn ghost" href="#install">How to install</a>
+      </div>
+      <p class="fine">Free beta. No account. Nothing leaves your Mac.</p>
+    </div>
+
+    <div aria-label="Example of the GOOD MIX button between two decks">
+      <div class="decks">
+        <div class="deck a">
+          <div class="label" style="color:#6aa0ff">Deck A</div>
+          <div class="t">Shook Ones Pt. II</div>
+          <div class="s">Mobb Deep</div>
+          <span class="chip">93 BPM</span>
+        </div>
+        <div class="gm"><span>GOOD<br>MIX</span><span class="label">tap it</span></div>
+        <div class="deck b">
+          <div class="label" style="color:var(--deckb)">Deck B</div>
+          <div class="t">Survival of the Fittest</div>
+          <div class="s">Mobb Deep</div>
+          <span class="chip">94 BPM</span>
+        </div>
+      </div>
+      <div class="saved"><span>Saved: Shook Ones → Survival of the Fittest</span><b>PROVEN MIX</b></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="label">What it looks like</div>
+    <h2>Your decks up top. What to play next below.</h2>
+    <div class="shot"><img src="screenshots/live.png" alt="GOOD MIXX live screen following TRAKTOR, with the GOOD MIX button between Deck A and Deck B and a list of next-song matches by BPM and key"></div>
+    <p class="cap">Live view following TRAKTOR. Songs fill in by themselves, and suggestions list your proven mixes first, then BPM and key matches.</p>
+  </section>
+
+  <section>
+    <div class="label">In the booth</div>
+    <h2>Live, while you play.</h2>
+    <div class="grid3">
+      <div class="card"><div class="label">01 · Follows</div><h3>Reads your decks</h3><p>Sees what DJAY Pro or TRAKTOR is playing. No typing. You can switch between the two in one set.</p></div>
+      <div class="card"><div class="label">02 · Remembers</div><h3>One tap saves a blend</h3><p>Hit GOOD MIX when two songs work together. Your good pairings pile up gig after gig.</p></div>
+      <div class="card"><div class="label">03 · Suggests</div><h3>Knows what's next</h3><p>Shows your proven mixes first, then songs that match on BPM and key. Use an iPad as a second screen if you want.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">After the gig</div>
+    <h2>Record the set. Rebuild it. Make new mixes from it.</h2>
+    <div class="grid3">
+      <div class="card"><div class="label">Set recorder · DJAY</div><h3>Captures how you played</h3><p>Records your DJAY set as you play: play and pause, deck positions, tempo, faders, crossfader, filter and EQ. It only watches. It never changes anything in DJAY.</p></div>
+      <div class="card"><div class="label">STUDIO</div><h3>Rebuild or remix a set</h3><p>Recreate a set exactly as you played it, or build a brand-new mix from your saved good mixes or your song list. Beat-matched, set-timing or simple crossfade blends.</p></div>
+      <div class="card"><div class="label">STUDIO · editor</div><h3>Tweak it and export</h3><p>Fine-tune on a timeline, add blend effects, then export an MP3 or WAV mix, or a playlist file you can load anywhere.</p></div>
+      <div class="card"><div class="label">Review a set</div><h3>Look back at the night</h3><p>Go through a set you played and see which blends you saved. Your whole library of proven mixes lives in My Mixes.</p></div>
+      <div class="card"><div class="label">Smart filters</div><h3>Steer what's next</h3><p>Pull suggestions from all your shows or just this one, or pick Energy Up to see tracks with a higher BPM when you want to lift the room.</p></div>
+      <div class="card"><div class="label">iPad · second screen</div><h3>Suggestions at arm's length</h3><p>Open the address from the start screen on an iPad on the same Wi-Fi and keep what's next in view while your laptop runs the decks.</p></div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="label">Install · about 2 minutes</div>
+    <h2>Getting it running</h2>
+    <div class="two">
+      <ol class="steps">
+        <li><div><b>Download and unzip</b><span>Grab the GOOD MIXX zip from the download button, then double-click it.</span></div></li>
+        <li><div><b>Drag it to Applications</b><span>Just like any other Mac app.</span></div></li>
+        <li><div><b>Open it the first time</b><span>It's not from the App Store, so right-click GOOD MIXX and choose Open, then Open again. On newer Macs: System Settings → Privacy &amp; Security → <b style="display:inline">Open Anyway</b>.</span></div></li>
+        <li><div><b>Say yes to Apple's free tools</b><span>If your Mac offers to install its developer tools, let it, then reopen GOOD MIXX.</span></div></li>
+        <li><div><b>Hook up your DJ app</b><span>DJAY: allow GOOD MIXX under Privacy &amp; Security → Accessibility. TRAKTOR: quit TRAKTOR and double-click <b style="display:inline">Add Traktor Link</b>, then follow the short guide.</span></div></li>
+      </ol>
+      <div>
+        <div class="card">
+          <div class="label">You'll need</div>
+          <ul class="req">
+            <li>A Mac running DJAY Pro and/or TRAKTOR Pro 3 or 4</li>
+            <li>Optional: an iPad on the same Wi-Fi as a second screen</li>
+            <li>Optional, for building finished MP3/WAV mixes: ffmpeg (<code>brew install ffmpeg</code>). Saving playlists works without it.</li>
+          </ul>
+          <p class="fine" style="margin-top:14px">Stuck? The <a href="https://github.com/XTRAGOODLABS/good-mixx/blob/main/INSTALL-MAC.md">full install guide</a> has every detail.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="ask">
+      <div class="label" style="color:var(--accent)">Looking for 5 testers</div>
+      <h2 style="margin-top:6px">Play a set with it. Tell me what broke.</h2>
+      <p>I'm looking for five Mac-based DJs to use GOOD MIXX for real and tell me what works, what's confusing, and what needs fixing. Rough notes are perfect.</p>
+      <div class="ctas">
+        <a class="btn primary" href="https://github.com/XTRAGOODLABS/good-mixx/releases/latest">Download for Mac</a>
+        <a class="btn ghost" href="https://www.instagram.com/djhellojoey/">DM @djhellojoey</a>
+        <a class="btn ghost" href="https://github.com/XTRAGOODLABS/good-mixx/issues">Report a bug</a>
+      </div>
+      <p class="fine">Easiest way to reach me: DM <b>@djhellojoey</b> on Instagram.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">GOOD MIXX is part of Crate OS by XTRA GOOD LABS. DJAY and TRAKTOR are trademarks of their owners. GOOD MIXX is an independent tool and isn't made by either company.</div>
+</footer>
+</body>
+</html>
