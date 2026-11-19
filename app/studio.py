@@ -280,6 +280,23 @@ def find_phase(path, start, length, bpm):
     return _phases[key]
 
 
+def find_phase_near(path, around, bpm, length=None):
+    """A beat near `around` (song seconds). Tries a few nearby stretches, since intros, breaks and vocals-only
+    parts don't show a clear kick. The beat grid of a song holds steady, so any of them will do."""
+    for start, secs in ((around - 8, 16), (around - 2, 24), (around - 24, 24), (around + 12, 24), (around - 48, 32)):
+        if start < 0:
+            secs += start
+            start = 0.0
+        if length and start + secs > length:
+            secs = length - start
+        if secs < 6:
+            continue
+        ph = find_phase(path, start, secs, bpm)
+        if ph is not None:
+            return ph
+    return None
+
+
 def _find_phase(path, start, length, bpm):
     a = decode(path, start, length)
     if not a or len(a) < SR:
@@ -341,7 +358,12 @@ def plan(mix, finder=None, analyze=True, lengths=None):
     for idx, r in enumerate(use):
         want_rec = r.get("seg") and (r.get("blend") or blend_all) in ("rec", "set")
         if want_rec:
-            _rec_setup(r)
+            rate = None
+            if prev is not None and prev.get("bpm") and r.get("bpm"):
+                b_adj, ratio = _match_tempo(prev["bpm"] * prev["rate"], r["bpm"])
+                if b_adj and abs(ratio - 1) <= MAX_STRETCH:
+                    rate = ratio                       # you beat-matched it live: same tempo as the song before
+            _rec_setup(r, rate)
             if prev is None:
                 r.update(mix_start=0.0, blend_used="rec")
             else:
@@ -388,7 +410,7 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             a["fade_out"] = min(float(r["tail"]), (a["song_out"] - a["song_in"]) / a["rate"])
         prev = r
     for r in use:
-        r["dur"] = (r["song_out"] - r["song_in"]) / r["rate"]
+        r["dur"] = r["pieces_dur"] if r.get("pieces") else (r["song_out"] - r["song_in"]) / r["rate"]
     for idx, r in enumerate(use):               # fades you set by hand: each song's own, independent of the other
         if r.get("fade_in_len"):
             r["fade_in"] = max(0.1, min(float(r["fade_in_len"]), r["dur"] * 0.95))
@@ -421,17 +443,25 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             "preview_only": not playable}
 
 
-def _rec_setup(r):
-    """A song from the set recorder: start where you started it, play at your tempo for as long as you did,
-    with your fader / crossfader / filter / EQ moves (r["auto"])."""
+def _rec_setup(r, rate=None):
+    """A song from the set recorder: start where you started it, play at your tempo for as long as you did
+    (loops included), with your fader / crossfader / filter / EQ moves (r["auto"])."""
     import recorder
     seg, length = r["seg"], r["length"]
-    rate = seg.get("rate") or 1.0
-    pos0 = recorder.start_position(seg, length)
+    if seg.get("tempo_known"):
+        rate = seg["rate"]                             # djay's own tempo readout: exact
+    elif not rate:
+        rate = recorder.fitted_rate(seg, length) or 1.0
+    pieces = recorder.play_pieces(seg, length, rate, r.get("bpm"))
+    pos0 = pieces[0][0] if pieces else recorder.start_position(seg, length, rate)
     lead = max(0.0, -pos0) / rate                     # started before the song's first second? skip that bit
     song_in = max(0.0, pos0)
     song_out = min(length, pos0 + (seg["t1"] - seg["t0"]) * rate)
-    if song_out - song_in < 2:
+    if pieces:
+        song_out = min(length, pieces[-1][0] + pieces[-1][1] * rate)
+        r["pieces"] = pieces
+        r["pieces_dur"] = sum(p[1] for p in pieces)
+    if song_out - song_in < 2 and not pieces:
         song_out = min(length, song_in + 2)
     auto = []
     for p in seg.get("auto") or []:
@@ -450,6 +480,14 @@ def _rec_place(a, b, analyze):
     (by less than half a beat) so its beats sit on the other song's beats."""
     if a.get("rec_unix") is not None:
         b["mix_start"] = a["mix_start"] + (b["rec_unix"] - a["rec_unix"])
+        # Line up the right part of the song before: where djay said it was when this one started
+        import recorder
+        if a.get("seg") and a.get("length"):
+            t_at = b["rec_unix"] - a["seg"]["unix"]
+            want = recorder.position_at(a["seg"], a["length"], a["rate"], t_at)
+            have = song_time(a, b["mix_start"])
+            if want is not None and have is not None and abs(want - have) < 6.0 * a["rate"]:
+                b["mix_start"] += (want - have) / a["rate"]
     else:
         a_end = a["mix_start"] + (a["song_out"] - a["song_in"]) / a["rate"]
         b["mix_start"] = max(a["mix_start"] + 2.0, a_end - 8.0)
@@ -462,26 +500,47 @@ def _rec_place(a, b, analyze):
     eff_a, eff_b = a["bpm"] * a["rate"], b["bpm"] * b["rate"]
     b_bpm, ratio = _match_tempo(eff_a, eff_b)
     if not b_bpm or abs(ratio - 1) > 0.02:             # not tempo-matched when you played it: leave as is
+        b["warn"] = "tempos didn't match here, so the beats weren't locked"
         return
     ta, tb = 60.0 / a["bpm"], 60.0 / (b["bpm"] * (b_bpm / eff_b))
-    s_a = a["song_in"] + (b["mix_start"] - a["mix_start"]) * a["rate"]
-    if not (a["song_in"] < s_a < a["song_out"]):
+    s_a = song_time(a, b["mix_start"])
+    if s_a is None:
         return
-    pa = find_phase(a["path"], max(0.0, s_a - 8), 16, a["bpm"])
-    pb = find_phase(b["path"], b["song_in"], 16, 60.0 / tb)
+    # You may hit play a little before or after the beat - djay's sync pulls it into place. So the recorded moment
+    # is a guide: the song is moved to the nearest beat of the song before (up to half a beat either way).
+    pa = find_phase_near(a["path"], s_a, a["bpm"], a.get("length"))
+    pb = find_phase_near(b["path"], b["song_in"] + 8, 60.0 / tb, b.get("length"))
     if pa is None or pb is None:
+        b["warn"] = "couldn't hear a clear beat to lock this blend - it's placed where you played it"
         return
     b_beat = pb + math.ceil((b["song_in"] - pb) / tb) * tb      # B's first beat
     mb = b["mix_start"] + (b_beat - b["song_in"]) / b["rate"]
-    sa_mb = a["song_in"] + (mb - a["mix_start"]) * a["rate"]
+    sa_mb = song_time(a, mb)
+    if sa_mb is None:
+        return
     a_beat = pa + round((sa_mb - pa) / ta) * ta
-    ma = a["mix_start"] + (a_beat - a["song_in"]) / a["rate"]
-    shift = ma - mb
+    shift = (a_beat - sa_mb) / a["rate"]
     if abs(shift) <= 0.5 * ta / a["rate"]:
         b["mix_start"] += shift
         b.update(beat_locked=True, beat0=b_beat, grid=tb, rec_shift=round(shift, 3))
         a.setdefault("beat0", a_beat)
         a.setdefault("grid", ta)
+
+
+def song_time(r, mix_t):
+    """Where in its song a placed song is at mix time mix_t (follows loops). None if it isn't playing then."""
+    t = mix_t - r["mix_start"]
+    if t < 0:
+        return None
+    if r.get("pieces"):
+        acc = 0.0
+        for pos, dur in r["pieces"]:
+            if t < acc + dur:
+                return pos + (t - acc) * r["rate"]
+            acc += dur
+        return None
+    s = r["song_in"] + t * r["rate"]
+    return s if s <= r["song_out"] else None
 
 
 def _start_point(r, analyze):
@@ -669,8 +728,21 @@ def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix", clip=False, tm
     cmd = [ff, "-y", "-hide_banner", "-nostats", "-progress", "pipe:1"]
     chains = []
     for i, r in enumerate(use):
-        cmd += ["-ss", "%.4f" % r["song_in"], "-t", "%.4f" % (r["song_out"] - r["song_in"]), "-i", r["path"]]
         f = ["aresample=44100", "aformat=sample_fmts=fltp:channel_layouts=stereo"]
+        src = "[%d:a]" % i
+        if r.get("pieces"):                               # a loop / jump: join the stretches you played, in order
+            first = min(p[0] for p in r["pieces"])
+            cmd += ["-ss", "%.4f" % first, "-i", r["path"]]
+            n = len(r["pieces"])
+            parts = "".join("[p%d_%d]" % (i, k) for k in range(n))
+            chains.append("[%d:a]asplit=%d%s" % (i, n, parts) if n > 1 else "[%d:a]anull[p%d_0]" % (i, i))
+            for k, (pos, dur) in enumerate(r["pieces"]):
+                chains.append("[p%d_%d]atrim=start=%.4f:duration=%.4f,asetpts=PTS-STARTPTS[q%d_%d]"
+                              % (i, k, pos - first, dur * r["rate"], i, k))
+            chains.append("%sconcat=n=%d:v=0:a=1[j%d]" % ("".join("[q%d_%d]" % (i, k) for k in range(n)), n, i))
+            src = "[j%d]" % i
+        else:
+            cmd += ["-ss", "%.4f" % r["song_in"], "-t", "%.4f" % (r["song_out"] - r["song_in"]), "-i", r["path"]]
         if abs(r["rate"] - 1) > 1e-4:
             f.append("atempo=%.6f" % r["rate"])
         f += fx_filters(r, i)
@@ -686,7 +758,7 @@ def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix", clip=False, tm
         ms = int(round(r["mix_start"] * 1000))
         if ms > 0:
             f.append("adelay=delays=%d:all=1" % ms)
-        chains.append("[%d:a]%s[a%d]" % (i, ",".join(f), i))
+        chains.append("%s%s[a%d]" % (src, ",".join(f), i))
     ins = "".join("[a%d]" % i for i in range(len(use)))
     tail = ""
     if clip:                                   # short preview: soft start and end, no clicks
@@ -961,6 +1033,15 @@ def clip_plan(p, t0, t1):
         for side in ("fx_out", "fx_in"):
             if r.get(side):
                 c[side] = dict(r[side], t0=r[side]["t0"] - t0, t1=r[side]["t1"] - t0)
+        if r.get("pieces"):
+            cut0, cut1, acc, kept = new_start - start, new_end - start, 0.0, []
+            for pos, dur in r["pieces"]:
+                a0, a1 = max(acc, cut0), min(acc + dur, cut1)
+                if a1 > a0:
+                    kept.append([pos + (a0 - acc) * r["rate"], a1 - a0])
+                acc += dur
+            c["pieces"] = kept or [[c["song_in"], c["dur"]]]
+            c["song_in"] = c["pieces"][0][0]
         if r.get("auto"):
             cut = new_start - start
             moved, before = [], None

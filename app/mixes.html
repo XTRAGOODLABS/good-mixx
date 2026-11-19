@@ -507,11 +507,14 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
 // ---- set recorder (Mac window only) ----
 (function(){
   if(!/^(localhost|127\.)/.test(location.hostname))return;
-  var b=$('recBtn'), st={}, polling=null, lastMsg='';b.hidden=false;
+  var b=$('recBtn'), st={}, polling=null, lastMsg='', warned=false;b.hidden=false;
   function show(r){st=r;
+    var blind=r.recording&&r.screen_ok===false;
     b.className=r.recording?'live':'';
-    b.textContent=!r.installed?(r.setup_busy?'SETTING UP…':'SET UP RECORDER'):!r.enabled?'REC OFF · TURN ON':r.recording?'REC':r.djay?'REC STARTING':'REC READY';
+    if(blind&&!warned){warned=true;toast('GOOD MIXX can\u2019t read djay\u2019s screen, so recordings miss song names, tempo and clock. Turn on GOOD MIXX in System Settings > Privacy & Security > Accessibility, then quit and reopen GOOD MIXX.')}
+    b.textContent=!r.installed?(r.setup_busy?'SETTING UP…':'SET UP RECORDER'):!r.enabled?'REC OFF · TURN ON':blind?'REC ⚠':r.recording?'REC':r.djay?'REC STARTING':'REC READY';
     b.title=!r.installed?'Record your sets from djay on this Mac so STUDIO can rebuild them exactly':
+      blind?'Recording, but GOOD MIXX can\u2019t read djay\u2019s screen (song names, tempo, clock). Turn on GOOD MIXX in System Settings > Privacy & Security > Accessibility, then quit and reopen GOOD MIXX.':
       r.recording?'Recording your set from djay. Click to turn recording off.':
       r.enabled?'Records automatically whenever djay is open on this Mac. Click to turn off.':'Recording is off. Click to turn it on.';
     if(r.setup_msg&&r.setup_msg!==lastMsg){lastMsg=r.setup_msg;toast(r.setup_msg)}

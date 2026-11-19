@@ -10,28 +10,36 @@ import recorder  # noqa: E402
 import studio  # noqa: E402
 
 
-def write_log(path, unix0, songs):
-    """songs: (deck, title, bpm, start_t, stop_t, start_pos, length, tempo%) -> a recorder log like gm-recorder.mjs writes."""
+def write_log(path, unix0, songs, screen=True, loop=None):
+    """songs: (deck, title, bpm, start_t, stop_t, start_pos, length, tempo%) -> a recorder log like gm-recorder.mjs writes.
+    Like djay: progress k of 128 is rounded UP and sent every ~2.5 s; screen=False = djay's screen couldn't be read.
+    loop=(deck, from_t, to_t, loop_secs): that deck jumps back every loop_secs between from_t and to_t."""
     ev = [{"t": 0, "k": "start", "unix": unix0, "version": "5.6.10"},
           {"t": 0.1, "k": "m", "p": "mixer.masterCrossfade", "v": 0.0}]
     for deck, title, bpm, t0, t1, pos0, length, tempo in songs:
         rate = 1 + tempo / 100.0
         ev.append({"t": t0, "k": "m", "p": "turntable%d.isPlaying" % deck, "v": 1})
+        def pos_at(t):
+            if loop and loop[0] == deck and loop[1] <= t < loop[2]:
+                return pos0 + (loop[1] - t0) * rate - loop[3] * rate + ((t - loop[1]) % loop[3]) * rate
+            if loop and loop[0] == deck and t >= loop[2]:
+                return pos0 + (loop[1] - t0) * rate - loop[3] * rate + ((loop[2] - loop[1]) % loop[3]) * rate + (t - loop[2]) * rate
+            return pos0 + (t - t0) * rate
         t = t0 + 0.05
         while t < t1:                                   # djay's clock on screen every 3 s, whole seconds
-            pos = pos0 + (t - t0) * rate
+            pos = pos_at(t)
             ev.append({"t": round(t, 3), "k": "d", "decks": [{"n": deck, "title": title, "artist": "Test", "bpm": bpm,
                                                             "time": "-%d:%02d" % divmod(int(length - pos + 0.999), 60),
-                                                            "rem": True, "tempo": tempo}]})
+                                                            "rem": True, "tempo": tempo}] if screen else []})
             t += 3
-        k = int(pos0 / length * 128) + 1                 # progress steps, polled every 0.1 s
-        while True:
-            tk = t0 + (k * length / 128 - pos0) / rate
-            if tk >= t1:
-                break
-            ev.append({"t": round(tk + 0.05, 3), "k": "m", "p": "turntable%d.display.songProgress" % deck,
-                       "v": k / 128 if k <= 64 else 0.5 + (k - 64) / 126})
-            k += 1
+        t, last = t0 + 0.3, None                         # progress: rounded up, sent every ~2.5 s
+        while t < t1:
+            k = min(127, max(1, int(-(-pos_at(t) * 128 // length))))
+            if k != last:
+                ev.append({"t": round(t, 3), "k": "m", "p": "turntable%d.display.songProgress" % deck,
+                           "v": k / 128 if k <= 64 else 0.5 + (k - 64) / 126})
+                last = k
+            t += 2.5 if not (loop and loop[0] == deck and loop[1] <= t < loop[2] + 3) else 0.5
         ev.append({"t": t1, "k": "m", "p": "turntable%d.isPlaying" % deck, "v": 0})
     return ev
 
@@ -53,11 +61,11 @@ def parse_checks(tmp):
              {"t": 40.4, "k": "m", "p": "turntable1.isPlaying", "v": 1}]
     finish(log, ev, moves)
     segs = recorder.parse(log)
-    assert [s["title"] for s in segs] == ["Alpha", "Bravo"], segs           # the hiccup didn't split Alpha
+    assert [s["title"] for s in segs] == ["Alpha", "Bravo"], [(s["title"], s["t0"]) for s in segs]   # hiccup joined
     a, b = segs
     assert abs(a["unix"] - 1002.0) < 0.01 and abs(b["rate"] - 0.9756) < 0.001
     pa, pb = recorder.start_position(a, 100.0), recorder.start_position(b, 100.0)
-    assert abs(pa - 10.0) < 0.2 and abs(pb - 5.0) < 0.2, (pa, pb)
+    assert abs(pa - 10.0) < 0.5 and abs(pb - 5.0) < 0.5, (pa, pb)
     def gain(seg, t):
         g = None
         for p in seg["auto"]:
@@ -67,6 +75,21 @@ def parse_checks(tmp):
     assert gain(a, 1) == 1.0 and gain(a, 70) == 1.0 and gain(a, 79) == 0.0, a["auto"]   # crossfader moves, deck 1
     assert gain(b, 1) == 0.0 and gain(b, 9) == 1.0, b["auto"]                         # and deck 2
     assert any(p[2] == 0.2 for p in a["auto"])                                  # filter move
+    # djay's screen couldn't be read + a 2-bar loop on deck 2: still one play, loop found, start points right
+    log2 = tmp / "rec-20261118-220000.jsonl"
+    ev = write_log(log2, 5000.0, [(1, "Alpha", 120, 1.0, 120.0, 0.0, 200.0, 0.0),
+                                  (2, "Bravo", 120, 40.0, 150.0, 8.0, 200.0, 0.0)],
+                   screen=False, loop=(2, 44.0, 80.0, 4.0))
+    finish(log2, ev, [{"t": 40.0, "k": "m", "p": "mixer.masterCrossfade", "v": 0.5}])
+    segs = recorder.parse(log2)
+    two = [x for x in segs if x["deck"] == 2]
+    assert len(two) == 1 and not two[0]["title"] and len(two[0]["pieces"]) >= 8, [(x["t0"], x["t1"]) for x in segs]
+    pcs = recorder.play_pieces(two[0], 200.0, 1.0, 120.0)
+    assert abs(pcs[1][1] - 4.0) < 0.01 and abs(pcs[1][0] - 8.0) < 0.6, pcs[:3]           # loop: 4 s from ~8 s in
+    r = recorder.Recorder(tmp)
+    r.dir = tmp
+    ref = r.match("Bravo", "Test", 5000.0 + 60.0, deck=2)                     # no name from the screen: deck + time
+    assert ref and r.segment(ref)["deck"] == 2 and not r.match("Bravo", "Test", 5000.0 + 60.0, deck=3)
     return log
 
 

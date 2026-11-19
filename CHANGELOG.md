@@ -5,6 +5,22 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.8.0 — November 18, 2026 · Recorded sets rebuild in time
+
+Fixes from the first real recorded set:
+- **Start points were ~1.8 s late:** djay rounds its progress steps up; GOOD MIXX treated them as rounded down.
+- **Songs with no name from djay's screen** (screen reading blocked) now match djay's history by deck + time, so
+  the recording is still used. **REC ⚠** warns when djay's screen can't be read (turn on GOOD MIXX in
+  Accessibility) - with it, recordings get djay's exact tempo and clock.
+- **Loops:** a loop (or cue jump) while playing is recognised and replayed - the loop snapped to whole beats.
+- **Cue back to the start after a pause** and **a new song loaded on the same deck** are no longer mistaken for
+  one continuous play.
+- **Tempo:** without djay's tempo readout, each song is set to the tempo of the song before (you beat-matched it).
+- **Blends line up with the right part of the song before** - from djay's readings around that moment.
+- **You may start a song a little before or after the beat - djay catches up:** the rebuild does the same, always
+  moving the song onto the nearest beat (up to half a beat), and tries several spots to hear the beat before
+  giving up (and says so when it can't).
+
 ## v1.7.1 — November 18, 2026
 
 - STUDIO: **⤢ BIG** no longer hides PAST SETS / MY MIXES / SONGS (the panel just gets narrower), and the BIG button

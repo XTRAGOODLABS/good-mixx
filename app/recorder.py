@@ -72,12 +72,28 @@ class Recorder:
         except (OSError, subprocess.SubprocessError):
             return False
 
+    def screen_ok(self):
+        """False when the recorder is running but can't read djay's screen (song names, clock, tempo)."""
+        if not (self.file and self.file.exists()):
+            return None
+        try:
+            with open(self.file, "rb") as fh:
+                fh.seek(max(0, self.file.stat().st_size - 20000))
+                tail = fh.read().decode("utf-8", "replace").splitlines()[1:]
+        except OSError:
+            return None
+        reads = [l for l in tail if '"k": "d"' in l or '"k":"d"' in l]
+        if len(reads) < 4:
+            return None
+        return any('"title"' in l for l in reads[-6:])
+
     def status(self):
         node, ver, ok = find_node()
         return {"installed": self.installed(), "node": ver, "node_ok": ok, "enabled": self.enabled(),
                 "recording": bool(self.proc and self.proc.poll() is None), "file": self.file.name if self.file else "",
                 "djay": self.djay_running() if os.path.exists("/usr/bin/pgrep") else False,
                 "setup_busy": self.setup_busy, "setup_msg": self.setup_msg, "error": self.error,
+                "screen_ok": self.screen_ok() if self.proc and self.proc.poll() is None else None,
                 "recordings": len(list(self.dir.glob("*.jsonl"))) if self.dir.exists() else 0}
 
     # ---------------------------------------------------------------- running
@@ -186,15 +202,21 @@ class Recorder:
         except (ValueError, IndexError, OSError):
             return None
 
-    def match(self, title, artist, start_unix, window=90):
-        """The recorded segment for a song djay logged at start_unix (best audible stretch), as a reference."""
+    def match(self, title, artist, start_unix, deck=None, window=90):
+        """The recorded segment for a song djay logged at start_unix. djay logs a song when it's brought in, so the
+        stretch of play that contains that moment wins. Songs with no name from the screen match by deck + time."""
         want = norm(title)
-        best, best_score = None, 0.0
+        best, best_score = None, -1e9
         for f in self.files():
             for i, s in enumerate(self.segments(f)):
-                if norm(s.get("title")) != want or abs(s["unix"] - start_unix) > window:
+                end = s["unix"] + (s["t1"] - s["t0"])
+                if s.get("title"):
+                    if norm(s["title"]) != want or not (s["unix"] - window <= start_unix <= end + window):
+                        continue
+                elif deck is None or s["deck"] != deck or not (s["unix"] - 10 <= start_unix <= end + 5):
                     continue
-                score = s["audible"] + 1.0 / (1 + abs(s["unix"] - start_unix))
+                inside = s["unix"] - 2 <= start_unix <= end + 2
+                score = (1000 if inside else 0) + s["audible"] - abs(s["unix"] - start_unix) / 100.0
                 if score > best_score:
                     best, best_score = "%s|%d" % (f.name, i), score
         return best
@@ -217,7 +239,8 @@ def parse(path):
     if not lines or lines[0].get("k") != "start":
         return []
     unix0 = lines[0]["unix"]
-    st = {n: {"playing": False, "title": None, "artist": None, "bpm": None, "key": None, "tempo": 0.0, "chan": 1.0,
+    st = {n: {"playing": False, "title": None, "artist": None, "bpm": None, "key": None, "tempo": None, "knob": 0.5,
+              "chan": 1.0,
               "filter": 0.5, "low": 0.5, "mid": 0.5, "high": 0.5} for n in (1, 2, 3, 4)}
     xf = [0.5]
     open_seg = {}
@@ -245,8 +268,10 @@ def parse(path):
         s["audible"] = round(aud, 2)
         tempos = [x for x in s.pop("tempos") if x is not None]
         tempos.sort()
+        s["tempo_known"] = bool(tempos)
         s["rate"] = round(1 + (tempos[len(tempos) // 2] if tempos else 0) / 100.0, 5)
-        if s["title"] and s["t1"] - s["t0"] > 1.0:
+        s["knob"] = st[n]["knob"]
+        if s["t1"] - s["t0"] > 1.0:                  # no title from the screen? djay's history names it later
             segs.append(s)
 
     def open_(n, t):
@@ -284,9 +309,20 @@ def parse(path):
                     d["playing"] = False
                     close(n, t)
             elif what == "display.songProgress":
-                if n in open_seg:
-                    raw = int(round(v * 128)) if v <= 0.5 else int(round((v - 0.5) * 126 + 64))
-                    open_seg[n]["prog"].append([round(t - open_seg[n]["t0"], 3), raw])
+                raw = int(round(v * 128)) if v <= 0.5 else int(round((v - 0.5) * 126 + 64))
+                s0 = open_seg.get(n)
+                if s0 and s0["prog"] and raw < s0["prog"][-1][1] - 1:
+                    new_song = s0["prog"][-1][1] >= 125 and raw <= 2   # ran to the end, then back to 0: next song
+                    close(n, t)                        # jumped back (cue / restart / loop): a new start from here
+                    if new_song:
+                        d["title"] = None
+                    open_(n, t)
+                    open_seg[n]["jump"] = not new_song
+                    s0 = open_seg[n]
+                if s0:
+                    s0["prog"].append([round(t - s0["t0"], 3), raw])
+            elif what == "effects.tempo.currentValue":
+                d["knob"] = v
             elif what == "song.loadingSuccess":
                 close(n, t)
                 if d["playing"]:
@@ -323,15 +359,43 @@ def parse(path):
                         s["clock"].append([round(t - s["t0"], 3), secs, bool(x.get("rem"))])
     for n in list(open_seg):
         close(n, end_t)
-    return _merge_blips(sorted(segs, key=lambda s: s["t0"]))
+    return _chain(_merge_blips(sorted(segs, key=lambda s: s["t0"])))
 
 
-def _merge_blips(segs, gap=1.0):
+def _chain(segs, gap=0.6):
+    """Back-to-back pieces on one deck where the song jumped back (a loop, or a cue jump while playing) become one
+    play with "pieces", so a rebuild can replay the loop."""
+    out = []
+    for s in segs:
+        prev = next((p for p in reversed(out) if p["deck"] == s["deck"]), None)
+        if prev and s.get("jump") and 0 <= s["t0"] - prev["t1"] < gap and \
+                (not s.get("title") or not prev.get("title") or norm(s["title"]) == norm(prev["title"])):
+            if "pieces" not in prev:
+                prev["pieces"] = [{"t": 0.0, "prog": prev["prog"], "clock": prev["clock"], "jump": bool(prev.get("jump"))}]
+            off = s["t0"] - prev["t0"]
+            prev["pieces"].append({"t": off, "prog": s["prog"], "clock": s["clock"], "jump": True})
+            prev["auto"] += [[p[0] + off] + p[1:] for p in s["auto"]]
+            prev["t1"] = s["t1"]
+            prev["audible"] = round(prev["audible"] + s["audible"], 2)
+            prev["title"] = prev.get("title") or s.get("title")
+            continue
+        out.append(s)
+    for s in out:
+        if "pieces" in s:
+            ends = [p["t"] for p in s["pieces"][1:]] + [s["t1"] - s["t0"]]
+            for p, e in zip(s["pieces"], ends):
+                p["dur"] = round(e - p["t"], 3)
+    return out
+
+
+def _merge_blips(segs, gap=2.0):
     """A split-second stop (a controller hiccup) shouldn't cut a song in two: join the pieces back up."""
     out = []
     for s in segs:
         prev = next((p for p in reversed(out) if p["deck"] == s["deck"]), None)
-        if prev and norm(prev["title"]) == norm(s["title"]) and 0 <= s["t0"] - prev["t1"] < gap:
+        same_spot = not (prev and prev["prog"] and s["prog"] and s["prog"][0][1] < prev["prog"][-1][1] - 1)
+        if prev and same_spot and not s.get("jump") and norm(prev["title"]) == norm(s["title"]) and \
+                0 <= s["t0"] - prev["t1"] < gap:
             shift = s["t0"] - prev["t0"]
             prev["prog"] += [[t + shift, r] for t, r in s["prog"]]
             prev["clock"] += [[t + shift, c, rem] for t, c, rem in s["clock"]]
@@ -350,30 +414,98 @@ def _clock(text):
     return int(m.group(1)) * 60 + int(m.group(2)) + (int(m.group(3)) / 10 if m.group(3) else 0)
 
 
-def start_position(seg, length):
-    """Where in the song (seconds) the deck was when this segment started, given the song's length.
-    djay's progress steps give exact timing, the on-screen clock pins down the scale; falls back to the clock."""
-    rate = seg.get("rate") or 1.0
-    est = []
+def start_position(seg, length, rate=None):
+    """Where in the song (seconds) the deck was when this segment started.
+    djay's progress value k (of 128) means the song is somewhere in ((k-1)/128, k/128] - it rounds up - and the
+    on-screen clock gives whole seconds. Each reading narrows down the start; the middle of what's left wins."""
+    rate = rate or seg.get("rate") or 1.0
+    step = length / 128.0
+    lows, highs = [], []
+    for t, raw in (seg.get("prog") or [])[1:]:          # the first reading can be from before play started
+        lows.append((raw - 1) * step - t * rate)
+        highs.append(raw * step - t * rate)
     for t, secs, rem in seg.get("clock") or []:
-        pos = (length - secs) if rem else secs
-        est.append(pos + 0.5 - t * rate)           # the clock shows whole seconds
-    clock_pos = sorted(est)[len(est) // 2] if est else None
-    prog = seg.get("prog") or []
-    best = None
-    for steps in (128.0, 127.0):
-        cand = [raw * length / steps - t * rate for t, raw in prog[1:]]
-        if len(cand) < 2:
-            continue
-        cand.sort()
-        p = cand[len(cand) // 2]
-        spread = cand[-1] - cand[0]
-        if clock_pos is None or abs(p - clock_pos) < 2.0:
-            if best is None or spread < best[1]:
-                best = (p, spread)
-    if best is not None:
-        return best[0]
-    return clock_pos if clock_pos is not None else 0.0
+        pos = (length - secs) if rem else secs           # remaining time is rounded up, elapsed rounded down
+        lows.append(pos - t * rate - 0.15)
+        highs.append(pos + 1.0 - t * rate + 0.15)
+    if not lows:
+        return 0.0
+    lows.sort()
+    highs.sort()
+    lo = lows[-2] if len(lows) > 3 else lows[-1]         # one late reading shouldn't decide it
+    hi = highs[1] if len(highs) > 3 else highs[0]
+    if hi < lo:                                           # readings disagree a little: split the difference
+        lo, hi = sorted(lows)[len(lows) // 2], sorted(highs)[len(highs) // 2]
+    return (lo + hi) / 2
+
+
+def position_at(seg, length, rate, t_at, window=12.0):
+    """Where in its song a recorded deck was at t_at (seconds after this play started), from the readings close
+    to that moment only - so a slightly wrong tempo doesn't add up over a long play. None if too few readings."""
+    part = seg
+    for p in seg.get("pieces") or []:
+        if p["t"] <= t_at:
+            part = p
+    off = part.get("t", 0.0) if part is not seg else 0.0
+    near = {"prog": [[0, 0]] + [[t - (t_at - off), r] for t, r in (part.get("prog") or [])[1:] if abs(t + off - t_at) <= window],
+            "clock": [[t - (t_at - off), c, rem] for t, c, rem in (part.get("clock") or []) if abs(t + off - t_at) <= window]}
+    if len(near["prog"]) + len(near["clock"]) < 4:
+        return None
+    return start_position(near, length, rate)
+
+
+def fitted_rate(seg, length):
+    """The playing speed measured from djay's progress steps (used only when the screen gave no tempo)."""
+    prog = seg["pieces"][-1]["prog"] if seg.get("pieces") else seg.get("prog") or []
+    pts = [(t, (raw - 0.5) * length / 128.0) for t, raw in prog[1:] if 0 < raw < 127]
+    if len(pts) < 20:
+        return None
+    n = len(pts)
+    mt, mp = sum(t for t, _ in pts) / n, sum(p for _, p in pts) / n
+    var = sum((t - mt) ** 2 for t, _ in pts)
+    if var <= 0:
+        return None
+    b = sum((t - mt) * (p - mp) for t, p in pts) / var
+    worst = max(abs(mp + b * (t - mt) - p) for t, p in pts)
+    return b if worst < 1.6 and 0.85 < b < 1.15 else None
+
+
+def play_pieces(seg, length, rate, bpm=None):
+    """For a play with loops / jumps: [[song position, seconds of mix], ...] in order.
+    Repeats of the same length are a loop: they share one start point (all their readings pooled), and the loop
+    length is snapped to whole beats when the tempo is known."""
+    pcs = seg.get("pieces")
+    if not pcs:
+        return None
+    jumps = [p for p in pcs if p["jump"]]
+    loop_len = None
+    if len(jumps) >= 2:
+        durs = sorted(p["dur"] for p in jumps[:-1]) or [jumps[0]["dur"]]
+        loop_len = durs[len(durs) // 2]
+        if bpm:
+            beat = 60.0 / (bpm * rate)
+            loop_len = max(1, round(loop_len / beat)) * beat
+    pooled = {"prog": [], "clock": []}
+    for p in jumps:                                   # every jump goes back to the same spot (the loop start)
+        pooled["prog"] += p["prog"][1:]
+        pooled["clock"] += p["clock"]
+    pooled["prog"] = [[0, 0]] + sorted(pooled["prog"])
+    loop_start = start_position(pooled, length, rate) if jumps else None
+    out = []
+    for i, p in enumerate(pcs):
+        dur = p["dur"]
+        if p["jump"]:
+            pos = loop_start
+            if loop_len and i < len(pcs) - 1:
+                dur = loop_len
+        elif i == 0 and loop_len and loop_start is not None and len(pcs) > 1:
+            pos = loop_start + loop_len * rate - dur * rate   # played into the loop's end, then jumped back
+            if pos < 0:
+                pos = start_position(p, length, rate)
+        else:
+            pos = start_position(p, length, rate)
+        out.append([max(0.0, pos), max(0.05, dur)])
+    return out
 
 
 # ---------------------------------------------------------------- turning knob values into sound
