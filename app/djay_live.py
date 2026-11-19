@@ -226,6 +226,38 @@ class Djay:
                 pass
             return self.allkeys
 
+    def cues_for(self, tid):
+        """The cue points you saved for a song in djay: [{"n": 1, "t": 0.3}, ...] sorted by number."""
+        if not tid or not self.path.exists():
+            return []
+        try:
+            stamp = os.stat(self.path).st_mtime
+        except OSError:
+            return []
+        cache = self.__dict__.setdefault("_cues", {})
+        hit = cache.get(tid)
+        if hit and hit[0] == stamp:
+            return hit[1]
+        out = []
+        try:
+            con = self._open()
+            try:
+                row = con.execute("select data from database2 where collection='mediaItemUserData' and key=?",
+                                  (tid,)).fetchone()
+            finally:
+                con.close()
+            if row:
+                u = decode(bytes(row[0]))
+                for c in u.get("cuePoints") or []:
+                    if isinstance(c, dict) and isinstance(c.get("time"), (int, float)) and c["time"] >= 0 \
+                            and isinstance(c.get("number"), int) and c["number"] > 0:
+                        out.append({"n": c["number"], "t": round(float(c["time"]), 3)})
+        except (sqlite3.Error, ValueError, TypeError, KeyError, IndexError):
+            out = []
+        out.sort(key=lambda c: c["n"])
+        cache[tid] = (stamp, out)
+        return out
+
     def tid_for(self, title, artist=""):
         """djay's id for a song it has played, matched by title (+ artist)."""
         import studio

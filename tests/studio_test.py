@@ -51,9 +51,36 @@ def planner_checks(folder):
     assert missing["playable"] == 1 and missing["items"][1]["skip"] and missing["warnings"]
 
 
+def cue_checks(folder):
+    """Set timing from djay: start from cue 1 unless it's an intro, place songs at djay's start times,
+    flag quick skips, fall back when djay's times don't fit."""
+    intro = folder / "Intro.mp3"
+    expr = ("0.3*sin(2*PI*220*t)*lt(t,10)+gte(t,10)*0.8*sin(2*PI*55*mod(t-10,60/119))*exp(-mod(t-10,60/119)*22)")
+    subprocess.run([studio.ffmpeg(), "-v", "quiet", "-y", "-f", "lavfi", "-i", "aevalsrc='%s':s=44100:d=100" % expr,
+                    "-ac", "2", str(intro)], check=True)
+    f = {t: str(folder / (t + ".mp3")) for t, _, _, _ in TRACKS}
+    items = [
+        {"title": "Alpha", "path": f["Alpha"], "bpm": 120, "set_start": 1000, "cues": [{"n": 1, "t": 0.3}]},
+        {"title": "Intro", "path": str(intro), "bpm": 119, "set_start": 1060, "cues": [{"n": 1, "t": 0.0}, {"n": 2, "t": 10.0}]},
+        {"title": "Bravo", "path": f["Bravo"], "bpm": 123, "set_start": 1130, "cues": [{"n": 1, "t": 0.71}]},
+        {"title": "Charlie", "path": f["Charlie"], "bpm": 121, "set_start": 1138, "cues": [{"n": 1, "t": 2.1}]},
+        {"title": "Alpha", "path": f["Alpha"], "bpm": 120, "set_start": 1900, "cues": [{"n": 1, "t": 0.3}]},
+    ]
+    p = studio.plan({"blend": "set", "bars": 16, "items": items})
+    r = p["items"]
+    assert r[1]["start_from"].startswith("cue 2") and abs(r[1]["song_in"] - 10.0) < 0.05, r[1]          # skipped the intro
+    assert abs(r[1]["mix_start"] - 60.0) < 0.6 and r[1]["blend_used"] == "set" and r[1].get("beat_locked")
+    assert r[2].get("quick") and r[3]["blend_used"] == "beat"                                       # 8 s play = skip
+    assert "ended" in r[4].get("warn", "") and r[4]["blend_used"] == "beat"                         # djay's time didn't fit
+    truth = {"Alpha": (120, .30), "Intro": (119, 10.0), "Bravo": (123, .71), "Charlie": (121, 2.10)}
+    check_beats(p, truth)
+    pick = studio.plan({"blend": "set", "items": [dict(items[0]), dict(items[1], start_cue=0)]})
+    assert pick["items"][1]["start_from"] == "beginning"
+
+
 def check_beats(p, truth):
     for a, b in zip(p["items"], p["items"][1:]):
-        assert b["blend_used"] == "beat", b
+        assert b.get("beat_locked"), b
 
         def beats(r):
             bpm, first = truth[r["title"]]
@@ -145,6 +172,7 @@ def main():
         folder.mkdir()
         make_tracks(folder)
         planner_checks(folder)
+        cue_checks(folder)
         server_checks(tmp, folder)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
