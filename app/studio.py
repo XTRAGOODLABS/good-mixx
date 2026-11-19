@@ -7,7 +7,7 @@ A mix is an ordered list of songs. For each blend between two songs GOOD MIXX ca
 The finished mix is built with ffmpeg (MP3 or WAV) and can also be saved as a playlist (.m3u8)
 with a timed tracklist. Your music files are only ever read, never changed.
 """
-import json, math, os, re, shutil, subprocess, threading, time
+import json, math, os, re, shutil, subprocess, tempfile, threading, time
 from array import array
 from pathlib import Path
 from urllib.parse import unquote
@@ -328,6 +328,8 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             r["length"] = float(it.get("length") or 0) or DEFAULT_LEN
         r["bpm"] = _bpm(it.get("bpm"))
         r["cues"] = (finder.cues(it) if finder else it.get("cues")) or []
+        rec = getattr(finder, "recorder", None) if finder else None
+        r["seg"] = (rec.segment(it["rec"]) if rec and it.get("rec") else None) or it.get("seg")
         rows.append(r)
     playable = [r for r in rows if r["path"]]
     use = playable if playable else rows          # nothing on this Mac: still show a preview
@@ -337,6 +339,15 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             r["warn"] = "not found on this Mac" + (" - left out of the audio mix" if playable else "")
     prev = None
     for idx, r in enumerate(use):
+        want_rec = r.get("seg") and (r.get("blend") or blend_all) in ("rec", "set")
+        if want_rec:
+            _rec_setup(r)
+            if prev is None:
+                r.update(mix_start=0.0, blend_used="rec")
+            else:
+                _rec_place(prev, r, analyze)
+            prev = r
+            continue
         cin = _start_point(r, analyze)
         cout = float(r.get("cut_out") or 0) or r["length"]
         cout = min(cout, r["length"]) if r["length"] else cout
@@ -408,6 +419,69 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             r.update(mix_start=None, dur=0)
     return {"items": rows, "total": total, "warnings": warnings, "playable": len(playable),
             "preview_only": not playable}
+
+
+def _rec_setup(r):
+    """A song from the set recorder: start where you started it, play at your tempo for as long as you did,
+    with your fader / crossfader / filter / EQ moves (r["auto"])."""
+    import recorder
+    seg, length = r["seg"], r["length"]
+    rate = seg.get("rate") or 1.0
+    pos0 = recorder.start_position(seg, length)
+    lead = max(0.0, -pos0) / rate                     # started before the song's first second? skip that bit
+    song_in = max(0.0, pos0)
+    song_out = min(length, pos0 + (seg["t1"] - seg["t0"]) * rate)
+    if song_out - song_in < 2:
+        song_out = min(length, song_in + 2)
+    auto = []
+    for p in seg.get("auto") or []:
+        t = p[0] - lead
+        if t <= 0 and auto and auto[-1][0] <= 0:
+            auto[-1] = [0.0] + p[1:]
+        else:
+            auto.append([max(0.0, t)] + p[1:])
+    r.update(song_in=song_in, song_out=song_out, natural_out=song_out, rate=rate, fade_in=0.0, fade_out=0.0,
+             rec_unix=seg["unix"] + lead, auto=auto or [[0.0, 1.0, .5, .5, .5, .5]], start_from="as recorded",
+             nudge_used=0.0)
+
+
+def _rec_place(a, b, analyze):
+    """Place a recorded song the same number of seconds after the song before as in your set, then nudge it
+    (by less than half a beat) so its beats sit on the other song's beats."""
+    if a.get("rec_unix") is not None:
+        b["mix_start"] = a["mix_start"] + (b["rec_unix"] - a["rec_unix"])
+    else:
+        a_end = a["mix_start"] + (a["song_out"] - a["song_in"]) / a["rate"]
+        b["mix_start"] = max(a["mix_start"] + 2.0, a_end - 8.0)
+    b["blend_used"] = "rec"
+    if b.get("nudge"):
+        b["mix_start"] += float(b["nudge"])
+        b["nudge_used"] = float(b["nudge"])
+    if not (analyze and a.get("path") and b.get("path") and a.get("bpm") and b.get("bpm")):
+        return
+    eff_a, eff_b = a["bpm"] * a["rate"], b["bpm"] * b["rate"]
+    b_bpm, ratio = _match_tempo(eff_a, eff_b)
+    if not b_bpm or abs(ratio - 1) > 0.02:             # not tempo-matched when you played it: leave as is
+        return
+    ta, tb = 60.0 / a["bpm"], 60.0 / (b["bpm"] * (b_bpm / eff_b))
+    s_a = a["song_in"] + (b["mix_start"] - a["mix_start"]) * a["rate"]
+    if not (a["song_in"] < s_a < a["song_out"]):
+        return
+    pa = find_phase(a["path"], max(0.0, s_a - 8), 16, a["bpm"])
+    pb = find_phase(b["path"], b["song_in"], 16, 60.0 / tb)
+    if pa is None or pb is None:
+        return
+    b_beat = pb + math.ceil((b["song_in"] - pb) / tb) * tb      # B's first beat
+    mb = b["mix_start"] + (b_beat - b["song_in"]) / b["rate"]
+    sa_mb = a["song_in"] + (mb - a["mix_start"]) * a["rate"]
+    a_beat = pa + round((sa_mb - pa) / ta) * ta
+    ma = a["mix_start"] + (a_beat - a["song_in"]) / a["rate"]
+    shift = ma - mb
+    if abs(shift) <= 0.5 * ta / a["rate"]:
+        b["mix_start"] += shift
+        b.update(beat_locked=True, beat0=b_beat, grid=tb, rec_shift=round(shift, 3))
+        a.setdefault("beat0", a_beat)
+        a.setdefault("grid", ta)
 
 
 def _start_point(r, analyze):
@@ -587,7 +661,7 @@ def _beat_blend(a, b, bars, analyze, at=None):
 
 
 # ---------------------------------------------------------------- building the audio
-def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix", clip=False):
+def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix", clip=False, tmpdir=None):
     ff = ffmpeg()
     use = [r for r in p["items"] if r.get("mix_start") is not None and r.get("path")]
     if not ff or not use:
@@ -600,6 +674,9 @@ def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix", clip=False):
         if abs(r["rate"] - 1) > 1e-4:
             f.append("atempo=%.6f" % r["rate"])
         f += fx_filters(r, i)
+        if r.get("auto"):
+            tmpdir = tmpdir or tempfile.mkdtemp(prefix="gm-auto-")
+            f += auto_filters(r, i, tmpdir)
         dur = r["dur"]
         fi = min(r["fade_in"], dur) if r["fade_in"] else 0.02
         fo = min(r["fade_out"], dur) if r["fade_out"] else 0.02
@@ -620,6 +697,40 @@ def ffmpeg_command(p, out_path, fmt="mp3", title="GOOD MIXX mix", clip=False):
             "-metadata", "artist=GOOD MIXX"]
     cmd += (["-c:a", "libmp3lame", "-b:a", "320k" if not clip else "160k"] if fmt == "mp3" else ["-c:a", "pcm_s16le"])
     return cmd + [str(out_path)]
+
+
+# ---------------------------------------------------------------- recorded moves
+def auto_filters(r, i, tmpdir):
+    """Replays your fader / crossfader, filter and EQ moves from the set recorder on this song."""
+    import recorder
+    lines, last = [], {}
+    first = None
+    for p in r["auto"]:
+        t, gain, filt, lo, mid, hi = p
+        if t > r["dur"] + 0.05:
+            break
+        hp, lp = recorder.filter_freqs(filt)
+        vals = {"volume@av%d volume" % i: "%.4f" % gain, "highpass@ah%d f" % i: str(hp), "lowpass@al%d f" % i: str(lp),
+                "bass@eb%d g" % i: str(recorder.eq_db(lo)), "equalizer@em%d g" % i: str(recorder.eq_db(mid)),
+                "treble@et%d g" % i: str(recorder.eq_db(hi))}
+        if first is None:
+            first = vals
+        for k, v in vals.items():
+            if last.get(k) != v:
+                lines.append("%.3f %s %s;" % (max(0.0, t), k, v))
+                last[k] = v
+    path = os.path.join(tmpdir, "moves%d.txt" % i)
+    with open(path, "w") as fh:
+        fh.write("\n".join(lines) + "\n")
+    g = lambda k: first[k]
+    esc = path.replace("\\", "/").replace("'", "").replace(":", "\\:")
+    return ["asendcmd=f='%s'" % esc,
+            "volume@av%d=volume=%s:eval=frame" % (i, g("volume@av%d volume" % i)),
+            "highpass@ah%d=f=%s" % (i, g("highpass@ah%d f" % i)),
+            "lowpass@al%d=f=%s" % (i, g("lowpass@al%d f" % i)),
+            "bass@eb%d=f=100:g=%s" % (i, g("bass@eb%d g" % i)),
+            "equalizer@em%d=f=1000:t=o:w=1.5:g=%s" % (i, g("equalizer@em%d g" % i)),
+            "treble@et%d=f=6000:g=%s" % (i, g("treble@et%d g" % i))]
 
 
 # ---------------------------------------------------------------- blend effects
@@ -850,6 +961,15 @@ def clip_plan(p, t0, t1):
         for side in ("fx_out", "fx_in"):
             if r.get(side):
                 c[side] = dict(r[side], t0=r[side]["t0"] - t0, t1=r[side]["t1"] - t0)
+        if r.get("auto"):
+            cut = new_start - start
+            moved, before = [], None
+            for p in r["auto"]:
+                if p[0] <= cut:
+                    before = p
+                else:
+                    moved.append([p[0] - cut] + p[1:])
+            c["auto"] = ([[0.0] + before[1:]] if before else []) + moved
         items.append(c)
     return {"items": items, "total": t1 - t0}
 

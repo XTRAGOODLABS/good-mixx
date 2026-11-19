@@ -5,6 +5,17 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.7.0 — November 18, 2026 · Set recorder
+
+- **Set recorder:** follows djay Pro on the Mac while you play - play/pause, where each deck is in its song,
+  tempo, channel faders, crossfader, filter and EQ - and saves it with your sets. Starts by itself whenever djay
+  is open; the **REC** button turns it on or off. **SET UP RECORDER** installs what it needs (no Terminal).
+  Uses djay-pro-mcp by ckryptickunal (MIT); only reads djay.
+- **As recorded** blend in STUDIO: songs start from the exact spot you started them, at your tempo, with your
+  fader / crossfader / filter / EQ moves replayed - then nudged by less than half a beat so the beats line up.
+  Recorded sets show **● RECORDED** in PAST SETS and recreate this way automatically.
+- Split-second stops (a controller hiccup) don't cut a song in two.
+
 ## v1.6.0 — November 18, 2026 · Each song's fades are its own
 
 - Every song has its **own fade-in ◆ and fade-out ◆**. Dragging one changes only that song - the other song's

@@ -10,7 +10,7 @@ A booth companion from **Crate OS by XTRA GOOD LABS** for **djay** and **Traktor
 with your iPad as the second screen. Original idea by **DJ Aquarobotics**.
 
 [![Checks](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml/badge.svg)](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml)
-[![Mac app](https://img.shields.io/badge/Mac_app-v1.6.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
+[![Mac app](https://img.shields.io/badge/Mac_app-v1.7.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
 ![Platform](https://img.shields.io/badge/tested_on-macOS-b79ae6?style=flat-square)
 
 [**Download for Mac**](https://github.com/XTRAGOODLABS/good-mixx/releases/latest) · [**Install guide**](INSTALL-MAC.md) · [**Version history**](CHANGELOG.md) · [**What's next**](ROADMAP.md)
@@ -26,6 +26,19 @@ with your iPad as the second screen. Original idea by **DJ Aquarobotics**.
 | Reads what djay or Traktor is playing on the Mac — no typing | Tap **GOOD MIX** when two songs blend well | Your proven mixes first, then BPM + key matches |
 | Switch between djay and Traktor in the same set | After the gig, review the set and keep the good ones | Same-show and energy-up filters |
 | Keys shown the way your DJ app shows them | Saved on your Mac, never in the cloud | Works on the Mac or any iPad on the same Wi-Fi |
+
+## Set recorder: rebuild a set exactly as you played it
+
+djay's history only keeps which songs you played and when. The **set recorder** follows djay on the Mac while you
+play - play/pause, where each deck is in its song, tempo, channel faders, crossfader, filter and EQ - and STUDIO's
+**As recorded** blend rebuilds the set from that: each song starts from the spot you started it, at your tempo,
+with your fader, crossfader, filter and EQ moves replayed (and its beats nudged onto the other song's beats).
+
+Click **SET UP RECORDER** in the Mac window once (needs [Node.js](https://nodejs.org) 22.13+, e.g. `brew install node`),
+then quit and reopen djay. After that it records whenever djay is open; **REC** turns it on or off.
+It uses [djay-pro-mcp](https://github.com/ckryptickunal/djay-pro-mcp) by ckryptickunal (MIT) to read djay through
+its MIDI controller feedback and on-screen readouts - it only reads, never changes anything in djay.
+Works with djay Pro on the Mac (tested with 5.6.10); sets played on the iPad can't be recorded.
 
 ## STUDIO: turn good mixes into a finished mix
 
@@ -71,6 +84,7 @@ djay keeps which songs you played and when, not your fader or EQ moves, so recre
 python3 app/mixes_server.py        # then open http://localhost:8770/mixes
 python3 tests/smoke_test.py        # quick end-to-end check
 python3 tests/studio_test.py       # STUDIO: beat matching, set timing, building an MP3 (needs ffmpeg)
+python3 tests/recorder_test.py     # set recorder: reading logs, As-recorded rebuild, replayed moves
 bash scripts/package-mac.sh        # builds dist/GOOD MIXX/ and the release zip
 ```
 
