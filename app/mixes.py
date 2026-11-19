@@ -249,7 +249,7 @@ def _studio_sets(limit=30):
                     "bpm": p.get("bpm") or lib.get("bpm") or "", "length": p.get("length") or lib.get("length") or 0,
                     "tid": p.get("tid", ""), "set_start": p["start"]}
             if has_rec:
-                ref = _recorder.match(p["title"], p["artist"], p["start"])
+                ref = _recorder.match(p["title"], p["artist"], p["start"], deck=p.get("deck"))
                 if ref:
                     song["rec"] = ref
             songs.append(song)
