@@ -5,6 +5,15 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.3.0 — November 18, 2026 · Move the audio around
+
+- STUDIO timeline: **drag a song** to bring it in earlier or later. Beat-matched blends snap to whole bars
+  (hold ⌥ for single beats) so the beats stay lined up; the song before it ends where the new blend ends.
+- **Drag a song's right edge** to end it sooner or later (moves the next song with it); **drag its left edge** to
+  skip into the song. A tip shows how far you've moved it.
+- **◂ ▸** nudge a song by a bar (or a second), **↺** puts it back, **UNDO** / ⌘Z undoes timeline changes.
+- Moves are saved with the mix and used for blend previews and the finished MP3 / WAV.
+
 ## v1.2.0 — November 18, 2026 · Own window, song waves, blend previews
 
 - **GOOD MIXX is a real Mac app now:** its own window and menus (copy/paste, zoom, full screen), no browser.

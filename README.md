@@ -10,7 +10,7 @@ A booth companion from **Crate OS by XTRA GOOD LABS** for **djay** and **Traktor
 with your iPad as the second screen. Original idea by **DJ Aquarobotics**.
 
 [![Checks](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml/badge.svg)](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml)
-[![Mac app](https://img.shields.io/badge/Mac_app-v1.2.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
+[![Mac app](https://img.shields.io/badge/Mac_app-v1.3.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
 ![Platform](https://img.shields.io/badge/tested_on-macOS-b79ae6?style=flat-square)
 
 [**Download for Mac**](https://github.com/XTRAGOODLABS/good-mixx/releases/latest) · [**Install guide**](INSTALL-MAC.md) · [**Version history**](CHANGELOG.md) · [**What's next**](ROADMAP.md)
@@ -37,6 +37,9 @@ In the GOOD MIXX window on the Mac, the **STUDIO** tab builds a mix in the spiri
   beats lined up, blended over 8/16/32 bars), **your set's timing** (each song comes in when it did in the real set),
   or a **simple crossfade**.
 - **Song waves on the timeline**, with zoom, so you can see each song, its blends and fades.
+- **Move the audio around:** drag a song to bring it in earlier or later (beat-matched blends snap to whole bars,
+  hold ⌥ for single beats), drag its right edge to end it sooner or later, drag its left edge to skip into it.
+  ◂ ▸ nudge by a bar, ↺ puts it back, UNDO / ⌘Z undoes.
 - **▶ BLEND** plays just that blend (built the same way as the full mix) with a moving playhead; **▶ PLAY** plays the finished mix.
 - **BUILD MP3 / WAV** saves the finished mix plus a timed tracklist to `Music/GOOD MIXX`.
   **SAVE PLAYLIST** saves an `.m3u8` playlist and tracklist to load and play live.

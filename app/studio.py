@@ -331,7 +331,8 @@ def plan(mix, finder=None, analyze=True, lengths=None):
         cout = min(cout, r["length"]) if r["length"] else cout
         if cout - cin < 8:
             cin, cout = 0.0, r["length"]
-        r.update(song_in=cin, song_out=cout, rate=1.0, fade_in=0.0, fade_out=0.0, blend_used="")
+        r.update(song_in=cin, song_out=cout, natural_out=cout, rate=1.0, fade_in=0.0, fade_out=0.0, blend_used="",
+                 nudge_used=0.0)
         if prev is None:
             r["mix_start"] = 0.0
             prev = r
@@ -369,6 +370,8 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             r["fade_in"] = over
             a["fade_out"] = over
         r["blend_used"] = used
+        if r.get("nudge"):
+            _nudge(a, r, float(r["nudge"]), used)
         prev = r
     for r in use:
         r["dur"] = (r["song_out"] - r["song_in"]) / r["rate"]
@@ -385,6 +388,33 @@ def plan(mix, finder=None, analyze=True, lengths=None):
             r.update(mix_start=None, dur=0)
     return {"items": rows, "total": total, "warnings": warnings, "playable": len(playable),
             "preview_only": not playable}
+
+
+def _nudge(a, b, shift, used):
+    """Move song `b` in earlier (shift < 0) or later, by hand. Beat-matched blends move by whole beats
+    so the beats stay lined up; song `a` then ends where the new blend ends."""
+    if used == "beat" and a.get("bpm"):
+        beat = 60.0 / (a["bpm"] * a["rate"])
+        shift = round(shift / beat) * beat
+    else:
+        beat = 0.0
+    auto = b["mix_start"]
+    a_end = a["mix_start"] + (a["natural_out"] - a["song_in"]) / a["rate"]
+    start = auto + shift
+    lo, hi = a["mix_start"] + 2.0, a_end - 1.0
+    if start < lo:
+        start = start + beat * math.ceil((lo - start) / beat) if beat else lo
+    if start > hi:
+        start = start - beat * math.ceil((start - hi) / beat) if beat else hi
+    if hi < lo:
+        return
+    over = max(0.5, min(b["fade_in"] or 0.5, a_end - start))
+    b["mix_start"] = start
+    b["fade_in"] = over
+    b["nudge_used"] = start - auto
+    a["song_out"] = a["natural_out"]
+    _cut(a, start + over)
+    a["fade_out"] = over
 
 
 def _cut(a, mix_time):

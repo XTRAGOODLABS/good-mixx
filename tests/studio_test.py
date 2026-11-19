@@ -32,8 +32,26 @@ def collection(home, folder):
 def planner_checks(folder):
     mix = {"blend": "beat", "bars": 16, "items": [{"title": t, "path": str(folder / (t + ".mp3")), "bpm": b}
                                                  for t, b, _, _ in TRACKS]}
-    p = studio.plan(mix)
+    moved = dict(mix, items=[dict(it) for it in mix["items"]])
+    moved["items"][1]["nudge"] = -16.3                   # dragged in earlier by hand
+    auto = studio.plan(mix)["items"][1]["mix_start"]
     truth = {t: (b, f) for t, b, f, _ in TRACKS}
+    for p in (studio.plan(mix), studio.plan(moved)):
+        check_beats(p, truth)
+    shifted = studio.plan(moved)["items"][1]
+    beat = 60 / 120.0
+    assert shifted["mix_start"] < auto and abs(shifted["nudge_used"] / beat - round(shifted["nudge_used"] / beat)) < 1e-6
+    p = studio.plan(mix)
+    clip = studio.preview(p, 1, str(folder / "preview.mp3"))
+    assert 30 < studio.duration(clip["path"]) < 90, clip
+    for blend in ("set", "fade"):
+        q = studio.plan(dict(mix, blend=blend, items=[dict(it, set_start=1000 + 80 * i) for i, it in enumerate(mix["items"])]))
+        assert all(r["blend_used"] == blend for r in q["items"][1:]), (blend, q["items"])
+    missing = studio.plan({"items": mix["items"][:1] + [{"title": "Nowhere", "length": 200}]})
+    assert missing["playable"] == 1 and missing["items"][1]["skip"] and missing["warnings"]
+
+
+def check_beats(p, truth):
     for a, b in zip(p["items"], p["items"][1:]):
         assert b["blend_used"] == "beat", b
 
@@ -50,13 +68,6 @@ def planner_checks(folder):
         end = a["mix_start"] + a["dur"]
         worst = max(min(abs(x - y) for y in ba) for x in bb if b["mix_start"] <= x <= end)
         assert worst < 0.012, "beats off by %.1f ms in %s -> %s" % (worst * 1000, a["title"], b["title"])
-    clip = studio.preview(p, 1, str(folder / "preview.mp3"))
-    assert 30 < studio.duration(clip["path"]) < 90, clip
-    for blend in ("set", "fade"):
-        q = studio.plan(dict(mix, blend=blend, items=[dict(it, set_start=1000 + 80 * i) for i, it in enumerate(mix["items"])]))
-        assert all(r["blend_used"] == blend for r in q["items"][1:]), (blend, q["items"])
-    missing = studio.plan({"items": mix["items"][:1] + [{"title": "Nowhere", "length": 200}]})
-    assert missing["playable"] == 1 and missing["items"][1]["skip"] and missing["warnings"]
 
 
 def call(port, path, data=None):
