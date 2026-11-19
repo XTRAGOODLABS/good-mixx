@@ -123,8 +123,8 @@ select{font:600 13px var(--font-body);min-height:44px;padding:0 10px;border-radi
 .st-sum b{color:var(--fg)}
 #v-studio{--lane:78px}
 body.st-big #v-studio{--lane:clamp(110px,calc((100vh - 330px) / 2),300px)}
-body.st-big .st-grid{grid-template-columns:minmax(0,1fr)}
-body.st-big .st-grid>.st-panel:first-child{display:none}
+body.st-big .st-grid{grid-template-columns:260px minmax(0,1fr)}
+body.st-big .st-src{max-height:calc(100vh - 210px)}
 #stTimeline{position:relative;height:calc(var(--lane) * 2 + 44px);background:var(--rack);border:1px solid var(--line);border-radius:var(--radius);overflow-x:auto;overflow-y:hidden;margin-bottom:10px}
 #stTl{position:relative;height:100%;min-width:100%}
 #stTimeline .bar{position:absolute;height:var(--lane);border-radius:5px;overflow:hidden;cursor:grab;touch-action:none}
@@ -510,7 +510,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
   var b=$('recBtn'), st={}, polling=null, lastMsg='';b.hidden=false;
   function show(r){st=r;
     b.className=r.recording?'live':'';
-    b.textContent=!r.installed?(r.setup_busy?'SETTING UP…':'SET UP RECORDER'):!r.enabled?'REC OFF':r.recording?'REC':r.djay?'REC STARTING':'REC READY';
+    b.textContent=!r.installed?(r.setup_busy?'SETTING UP…':'SET UP RECORDER'):!r.enabled?'REC OFF · TURN ON':r.recording?'REC':r.djay?'REC STARTING':'REC READY';
     b.title=!r.installed?'Record your sets from djay on this Mac so STUDIO can rebuild them exactly':
       r.recording?'Recording your set from djay. Click to turn recording off.':
       r.enabled?'Records automatically whenever djay is open on this Mac. Click to turn off.':'Recording is off. Click to turn it on.';
@@ -524,6 +524,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
       if(!st.node_ok){alert('The set recorder needs Node.js 22.13 or newer'+(st.node?' (this Mac has '+st.node+')':'')+'.\n\nIf you have Homebrew, open Terminal and type:  brew install node\nThen click SET UP RECORDER again.');return}
       if(!confirm('Set up the recorder?\n\nGOOD MIXX will download djay-pro-mcp (free, open source) and add five hidden controller settings to djay so it can follow your decks, faders, filter and EQ. It only reads djay - it never plays or changes anything.\n\nTakes a couple of minutes. Afterwards, quit djay and open it again.'))return;
       api('/api/recorder/setup',{}).then(show);clearInterval(polling);polling=setInterval(poll,1500);return}
+    if(st.enabled&&!confirm('Stop recording your sets?\n\nGOOD MIXX won\u2019t record what you play in djay until you turn REC back on.'))return;
     api('/api/recorder',{enabled:!st.enabled}).then(function(r){show(r);toast(r.enabled?'Recording on: GOOD MIXX records whenever djay is open.':'Recording off.')});
   });
   poll();polling=setInterval(poll,5000);
@@ -616,7 +617,8 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
     var total=P?plan.total:0, found=P?P.filter(function(r){return r.path}).length:0;
     $('stSum').innerHTML=items.length?'<span><b>'+items.length+'</b> songs</span>'+(P?'<span>length <b>'+clk(total)+'</b></span><span><b>'+found+'</b> of '+items.length+' found on this Mac</span>':planErr?'<span style="color:#ff9b8a">'+esc(planErr)+'</span> <button id="stRetry" style="min-height:30px;font-size:11px">TRY AGAIN</button>':'<span>finding your songs on this Mac…</span>')+(info.ffmpeg===false?'<span style="color:#ff9b8a">building audio needs ffmpeg - SAVE PLAYLIST still works</span>':'')
       +(P&&P.some(function(r){return r.quick})?'<button id="stSkips" style="min-height:30px;font-size:11px">REMOVE '+P.filter(function(r){return r.quick}).length+' QUICK SKIP'+(P.filter(function(r){return r.quick}).length>1?'S':'')+'</button>':'')
-      +(P?'<span class="st-zoom"><button id="stBig" class="'+(document.body.classList.contains('st-big')?'on':'')+'" title="Bigger timeline">⤢ BIG</button><button data-z="-1" title="Zoom out">−</button><button data-z="0" title="Fit the whole mix">FIT</button><button data-z="1" title="Zoom in">+</button></span>':''):'<span>Add songs from a past set, your good mixes, or your song list.</span>';
+      :'<span>Add songs from a past set, your good mixes, or your song list.</span>';
+    $('stSum').innerHTML+='<span class="st-zoom"><button id="stBig" class="'+(document.body.classList.contains('st-big')?'on':'')+'" title="Bigger timeline">⤢ BIG</button>'+(P?'<button data-z="-1" title="Zoom out">−</button><button data-z="0" title="Fit the whole mix">FIT</button><button data-z="1" title="Zoom in">+</button>':'')+'</span>';
     // timeline
     var tl='';
     if(P&&total>0){

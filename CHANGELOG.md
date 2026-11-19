@@ -5,6 +5,12 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.7.1 — November 18, 2026
+
+- STUDIO: **⤢ BIG** no longer hides PAST SETS / MY MIXES / SONGS (the panel just gets narrower), and the BIG button
+  is always there - before, an empty mix in BIG mode left no way back to your sets.
+- REC asks before turning recording off, and says **REC OFF · TURN ON** when it's off.
+
 ## v1.7.0 — November 18, 2026 · Set recorder
 
 - **Set recorder:** follows djay Pro on the Mac while you play - play/pause, where each deck is in its song,
