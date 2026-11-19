@@ -38,6 +38,8 @@ Click **SET UP RECORDER** in the Mac window once (needs [Node.js](https://nodejs
 then quit and reopen djay. After that it records whenever djay is open; **REC** turns it on or off.
 It uses [djay-pro-mcp](https://github.com/ckryptickunal/djay-pro-mcp) by ckryptickunal (MIT) to read djay through
 its MIDI controller feedback and on-screen readouts - it only reads, never changes anything in djay.
+**SET UP RECORDER** downloads djay-pro-mcp from GitHub (a tested version) into a `djay-pro-mcp` folder in your
+home folder and installs it - that's why the recorder needs Node.js. It isn't bundled with GOOD MIXX.
 Works with djay Pro on the Mac (tested with 5.6.10); sets played on the iPad can't be recorded.
 
 ## STUDIO: turn good mixes into a finished mix
@@ -95,7 +97,9 @@ on a Mac for every change and published with each release; `scripts/package-mac.
 
 **Idea: DJ Aquarobotics** — the original concept of a booth tool that remembers good mixes and suggests
 what to play next. Built by XTRA GOOD LABS with Claude.
-Thanks to [djay-pro-mcp](https://github.com/ckryptickunal/djay-pro-mcp) by **ckryptickunal** for inspiration. Traktor link based on
+**Set recorder: built on [djay-pro-mcp](https://github.com/ckryptickunal/djay-pro-mcp) by ckryptickunal** (MIT) - it's how GOOD MIXX
+reads djay live. Thank you! Traktor link based on
 [traktor-api-client](https://github.com/ErikMinekus/traktor-api-client) by Erik Minekus (MIT).
 Fonts: IBM Plex (OFL). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+djay is a trademark of Algoriddim and Traktor of Native Instruments. GOOD MIXX is an independent tool, not affiliated with or endorsed by either.
 Project code is not yet under an open-source license; all rights reserved until one is chosen.
