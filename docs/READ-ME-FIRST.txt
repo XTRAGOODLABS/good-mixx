@@ -23,6 +23,12 @@ TRAKTOR PRO 4 or 3 (one time)
 3. Open GOOD MIXX and play. Keys show the Traktor way (like 3m) while you're on Traktor.
 Undo any time with "Remove Traktor Link". Run "Add Traktor Link" again after Traktor updates.
 
+SET RECORDER (djay on the Mac)
+Click SET UP RECORDER at the top of the GOOD MIXX window once, then quit djay and open it again.
+From then on GOOD MIXX records your sets whenever djay is open (REC turns it on/off). In STUDIO, sets you
+recorded show "● RECORDED" and RECREATE THIS SET rebuilds them as you played them: same start points,
+tempo, fader, crossfader, filter and EQ moves. Needs Node.js (brew install node). Only reads djay.
+
 STUDIO (in the GOOD MIXX window on the Mac)
 Make a finished mix from your good mixes, or recreate a set you played on this Mac.
 - PAST SETS > RECREATE THIS SET, or add songs from MY MIXES / SONGS.

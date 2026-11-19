@@ -4,6 +4,7 @@ import csv, io, json, os, re, subprocess, threading, time
 from pathlib import Path
 import djay_live
 import djay_screen
+import recorder
 import studio
 import traktor_live
 
@@ -21,6 +22,15 @@ _screen = None   # started below, once _norm exists
 _index = {"mtime": None, "both": {}, "title": {}}
 STUDIO = DATA / "studio_mixes.json"
 _finder = studio.Finder(DATA, djay=_djay, traktor=_traktor, library=LIB.exists())
+_recorder = recorder.Recorder(DATA)
+_finder.recorder = _recorder
+
+
+def start_recorder():
+    """Record sets whenever djay is open on this Mac (if djay-pro-mcp is set up and recording is on)."""
+    import atexit
+    atexit.register(_recorder.stop)
+    _recorder.start_watching()
 _render = studio.Renderer()
 
 
@@ -226,6 +236,7 @@ def _studio_sets(limit=30):
     for p in plays:
         by.setdefault(p["session"], []).append(p)
     out = []
+    has_rec = bool(_recorder.files())
     for sid, ps in sorted(by.items(), key=lambda kv: kv[1][0]["start"], reverse=True)[:limit]:
         songs, last = [], None
         for p in sorted(ps, key=lambda x: x["start"]):
@@ -234,10 +245,16 @@ def _studio_sets(limit=30):
             last = p
             s = _djay_song(p)
             lib = ix["both"].get(_norm(p["artist"]) + "|" + _norm(p["title"])) or ix["title"].get(_norm(p["title"])) or {}
-            songs.append({"sid": s["id"], "title": p["title"], "artist": p["artist"], "key": s.get("key", ""),
-                          "bpm": p.get("bpm") or lib.get("bpm") or "", "length": p.get("length") or lib.get("length") or 0,
-                          "tid": p.get("tid", ""), "set_start": p["start"]})
+            song = {"sid": s["id"], "title": p["title"], "artist": p["artist"], "key": s.get("key", ""),
+                    "bpm": p.get("bpm") or lib.get("bpm") or "", "length": p.get("length") or lib.get("length") or 0,
+                    "tid": p.get("tid", ""), "set_start": p["start"]}
+            if has_rec:
+                ref = _recorder.match(p["title"], p["artist"], p["start"])
+                if ref:
+                    song["rec"] = ref
+            songs.append(song)
         out.append({"id": sid, "start": int(ps[0]["start"]), "end": int(ps[-1]["start"]), "songs": songs,
+                    "recorded": sum(1 for x in songs if x.get("rec")),
                     "app": "Traktor" if str(ps[0]["key"]).startswith("tk-") else "djay"})
     return {"error": err, "sets": out}
 
@@ -254,10 +271,10 @@ def _clean_mix(m):
             continue
         items.append({k: it.get(k) for k in ("sid", "title", "artist", "bpm", "key", "length", "tid", "set_start",
                                              "blend", "cut_in", "cut_out", "nudge", "start_cue", "bars", "fade", "fx",
-                                             "fade_in_len", "fade_out_len", "tail")
+                                             "fade_in_len", "fade_out_len", "tail", "rec")
                       if it.get(k) not in (None, "") and not (k in ("cut_in", "cut_out", "nudge", "fade_in_len", "fade_out_len", "tail")
                                                               and not it.get(k))})
-    blend = m.get("blend") if m.get("blend") in ("beat", "set", "fade") else "beat"
+    blend = m.get("blend") if m.get("blend") in ("beat", "set", "fade", "rec") else "beat"
     return {"id": str(m.get("id") or "")[:40], "name": str(m.get("name") or "New mix")[:80], "blend": blend,
             "bars": int(m.get("bars") or 16), "fade": float(m.get("fade") or 12), "source": str(m.get("source") or "")[:80],
             "items": items}
@@ -496,6 +513,8 @@ def handle_get(h):
         return _send(h, 200, _now())
     if path == "/api/djay/sessions":
         return _send(h, 200, _sessions())
+    if path == "/api/recorder":
+        return _send(h, 200, _recorder.status())
     if path.startswith("/api/studio/"):
         try:
             return _studio_get(h, path)
@@ -518,6 +537,7 @@ def handle_post(h):
         return _send(h, 200, b"{}")
     if path == "/api/quit" and h.client_address[0] in ("127.0.0.1", "::1"):
         _send(h, 200, {"ok": True})              # only from this Mac, never from the iPad
+        _recorder.stop()
         threading.Timer(0.3, lambda: os._exit(0)).start()
         return True
     if not path.startswith("/api/"):
@@ -529,6 +549,14 @@ def handle_post(h):
         raw = h.rfile.read(length)
         if path.startswith("/api/studio/"):
             return _studio_post(h, path, raw)
+        if path in ("/api/recorder", "/api/recorder/setup"):
+            if not _local(h):
+                return _send(h, 403, {"error": "only on the Mac"})
+            if path == "/api/recorder/setup":
+                _recorder.setup()
+            else:
+                _recorder.set_enabled(bool(json.loads(raw or b"{}").get("enabled")))
+            return _send(h, 200, _recorder.status())
         if path == "/api/history":
             items = _parse_history(raw.decode("utf-8", "replace"))
             played = _match(items)

@@ -124,6 +124,7 @@ def main():
             "off": "not available on this computer"}.get(st, "starting (" + st + ")"))
         sys.stdout.flush()
     threading.Thread(target=screen_status, daemon=True).start()
+    mixes.start_recorder()
     print("")
     print("Keep this window open while you play. Close it to stop.")
     sys.stdout.flush()

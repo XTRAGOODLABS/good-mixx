@@ -98,6 +98,12 @@ textarea{width:100%;min-height:90px;font-size:14px}
 #launch .ipad{position:absolute;top:24px;font:500 12px var(--font-mono);color:var(--muted);letter-spacing:.06em;text-align:center}
 #launch .ipad b{color:#fff;font-weight:600}
 footer{padding:6px 14px 10px;font:500 9px var(--font-mono);letter-spacing:.14em;color:#4c525e;text-align:right;text-transform:uppercase}
+/* ---- set recorder button ---- */
+#recBtn{margin-right:8px;font:600 11px var(--font-mono);letter-spacing:.08em;min-height:36px;padding:0 12px}
+#recBtn.live{color:#ff5a4a;border-color:#ff5a4a66}
+#recBtn.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff5a4a;margin-right:7px;animation:recblink 1.2s infinite}
+@keyframes recblink{50%{opacity:.25}}
+.st-set .rec{color:#ff5a4a;font:600 10px var(--font-mono);margin-left:6px}
 /* ---- STUDIO (Mac window) ---- */
 .st-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .st-top input[type=text]{flex:1;min-width:220px;font:600 16px var(--font-body);padding:10px 12px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel);color:var(--fg)}
@@ -182,7 +188,7 @@ body.st-big .st-grid>.st-panel:first-child{display:none}
 <button class="tab" data-v="saved">MY MIXES</button>
 <button class="tab" data-v="studio" id="studioTab" hidden>STUDIO</button>
 </div>
-<a href="/" id="stemsLink">STEMS + FX →</a><button id="quitBtn" hidden title="Stop GOOD MIXX on this Mac">QUIT</button>
+<a href="/" id="stemsLink">STEMS + FX →</a><button id="recBtn" hidden title="Set recorder">REC</button><button id="quitBtn" hidden title="Stop GOOD MIXX on this Mac">QUIT</button>
 </header>
 
 <section class="view show" id="v-live">
@@ -232,7 +238,7 @@ body.st-big .st-grid>.st-panel:first-child{display:none}
   <input type="text" id="stName" placeholder="Name this mix" maxlength="80">
   <span class="st-lbl">Blends</span>
   <select id="stBlend" title="How songs blend, unless a song says otherwise">
-    <option value="beat">Beat-matched</option><option value="set">My set's timing</option><option value="fade">Simple crossfade</option>
+    <option value="beat">Beat-matched</option><option value="set">My set's timing</option><option value="fade">Simple crossfade</option><option value="rec">As recorded</option>
   </select>
   <select id="stBars" title="How long beat-matched blends last"><option value="8">8 bars</option><option value="16" selected>16 bars</option><option value="32">32 bars</option></select>
   <select id="stFade" title="How long crossfades last"><option value="6">6 sec fade</option><option value="12" selected>12 sec fade</option><option value="20">20 sec fade</option><option value="30">30 sec fade</option></select>
@@ -498,6 +504,30 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
     });
   });
 })();
+// ---- set recorder (Mac window only) ----
+(function(){
+  if(!/^(localhost|127\.)/.test(location.hostname))return;
+  var b=$('recBtn'), st={}, polling=null, lastMsg='';b.hidden=false;
+  function show(r){st=r;
+    b.className=r.recording?'live':'';
+    b.textContent=!r.installed?(r.setup_busy?'SETTING UP…':'SET UP RECORDER'):!r.enabled?'REC OFF':r.recording?'REC':r.djay?'REC STARTING':'REC READY';
+    b.title=!r.installed?'Record your sets from djay on this Mac so STUDIO can rebuild them exactly':
+      r.recording?'Recording your set from djay. Click to turn recording off.':
+      r.enabled?'Records automatically whenever djay is open on this Mac. Click to turn off.':'Recording is off. Click to turn it on.';
+    if(r.setup_msg&&r.setup_msg!==lastMsg){lastMsg=r.setup_msg;toast(r.setup_msg)}
+    if(!r.setup_busy&&polling&&r.installed){clearInterval(polling);polling=setInterval(poll,5000)}
+  }
+  function poll(){api('/api/recorder').then(show).catch(function(){})}
+  b.addEventListener('click',function(){
+    if(!st.installed){
+      if(st.setup_busy)return;
+      if(!st.node_ok){alert('The set recorder needs Node.js 22.13 or newer'+(st.node?' (this Mac has '+st.node+')':'')+'.\n\nIf you have Homebrew, open Terminal and type:  brew install node\nThen click SET UP RECORDER again.');return}
+      if(!confirm('Set up the recorder?\n\nGOOD MIXX will download djay-pro-mcp (free, open source) and add five hidden controller settings to djay so it can follow your decks, faders, filter and EQ. It only reads djay - it never plays or changes anything.\n\nTakes a couple of minutes. Afterwards, quit djay and open it again.'))return;
+      api('/api/recorder/setup',{}).then(show);clearInterval(polling);polling=setInterval(poll,1500);return}
+    api('/api/recorder',{enabled:!st.enabled}).then(function(r){show(r);toast(r.enabled?'Recording on: GOOD MIXX records whenever djay is open.':'Recording off.')});
+  });
+  poll();polling=setInterval(poll,5000);
+})();
 // ---- STUDIO: build a mix from good mixes or a past set (Mac window only) ----
 (function(){
   if(!/^(localhost|127\.)/.test(location.hostname))return;
@@ -505,7 +535,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
   var mix=null, plan=null, sets=[], saved=[], src='sets', sel=-1, planTimer=null, renderTimer=null, info={}, srcQ='', planErr='';
   var zoom=1, waves={}, playing=null; // playing: {kind:'blend'|'mix', index, start}
   function why(e){return e&&e.status===404?'GOOD MIXX needs a restart to finish updating: click QUIT, then open GOOD MIXX again.':(e&&e.status?'Something went wrong: '+e.message:'Can\u2019t reach GOOD MIXX on this Mac. Is it still running?')}
-  var BL={beat:'Beat-matched',set:'Set timing',fade:'Crossfade'};
+  var BL={beat:'Beat-matched',set:'Set timing',fade:'Crossfade',rec:'As recorded'};
   var FXN={lp_out:'Low-pass out',hp_out:'High-pass out',hp_in:'High-pass in',bass_swap:'Bass swap'};
   var FXS={lp_out:'LP ↘',hp_out:'HP ↗',hp_in:'HP ↘ IN',bass_swap:'BASS SWAP'};
   try{if(localStorage.getItem('gmBig'))document.body.classList.add('st-big')}catch(e){}
@@ -546,7 +576,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
     document.querySelectorAll('.stSrc').forEach(function(b){b.classList.toggle('on',b.dataset.s===src)});
     var h='';
     if(src==='sets'){
-      h=sets.length?sets.map(function(s,i){return '<div class="st-set"><div class="d">'+new Date(s.start*1000).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' · '+esc(s.app)+'</div><div class="s">'+s.songs.length+' songs: '+esc(s.songs.slice(0,4).map(function(x){return x.title}).join(', '))+(s.songs.length>4?'…':'')+'</div><button data-rec="'+i+'">RECREATE THIS SET</button> <button data-add="'+i+'">ADD SONGS</button></div>'}).join(''):'<div class="muted">No djay or Traktor sets on this Mac yet.</div>';
+      h=sets.length?sets.map(function(s,i){return '<div class="st-set"><div class="d">'+new Date(s.start*1000).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' · '+esc(s.app)+(s.recorded?'<span class="rec">● '+s.recorded+' RECORDED</span>':'')+'</div><div class="s">'+s.songs.length+' songs: '+esc(s.songs.slice(0,4).map(function(x){return x.title}).join(', '))+(s.songs.length>4?'…':'')+'</div><button data-rec="'+i+'">RECREATE THIS SET</button> <button data-add="'+i+'">ADD SONGS</button></div>'}).join(''):'<div class="muted">No djay or Traktor sets on this Mac yet.</div>';
     }else if(src==='mixes'){
       var last=mix.items.length?mix.items[mix.items.length-1]:null, lastId=last&&last.sid;
       if(last){
@@ -569,7 +599,8 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
       if(mix.items.length&&!confirm('Replace the songs in this mix with that set?'))return;
       var name=$('stName').value.trim()||('Set '+new Date(s.start*1000).toLocaleDateString([],{month:'short',day:'numeric'}));
       mix.items=s.songs.map(function(x){return Object.assign({},x)});mix.source='set:'+s.id;$('stName').value=name;
-      $('stBlend').value='set';changed();toast('Recreated '+s.songs.length+' songs. Blends use your set’s timing - change it any time.');return}
+      $('stBlend').value=s.recorded?'rec':'set';changed();
+      toast(s.recorded?'Recreated '+s.songs.length+' songs exactly as you played them ('+s.recorded+' recorded).':'Recreated '+s.songs.length+' songs. Blends use your set’s timing - change it any time.');return}
     if(b&&b.dataset.add!==undefined){add(sets[+b.dataset.add].songs.map(function(x){return Object.assign({},x)}));return}
     if(!r)return;
     if(r.dataset.song){var it=itemFrom(r.dataset.song);if(it)add([it]);return}
@@ -593,6 +624,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
       for(var t=0;t<total;t+=step)tl+='<div class="tick" style="left:'+(t/total*100)+'%">'+clk(t)+'</div>';
       var lane=0;P.forEach(function(r,i){if(r.mix_start==null)return;
         tl+='<div class="bar l'+lane+(i===sel?' sel':'')+'" data-i="'+i+'" title="'+esc(who(r))+(r.blend_used?' · '+BL[r.blend_used]:'')+'" style="left:'+(r.mix_start/total*100)+'%;width:'+Math.max(.3,r.dur/total*100)+'%"><canvas></canvas><span>'+esc(r.title)+'</span><b class="h hl" title="Drag to skip into the song"></b><b class="h hr" title="Drag to end it sooner or later"></b>'
+          +(r.auto?'<i class="fx" style="left:8px;right:auto;bottom:auto;top:20px;background:#ff5a4a;color:#fff">● AS RECORDED</i>':'')
           +'<b class="fh fhi" style="left:'+(Math.max(r.fade_in,0)/r.dur*100)+'%" title="Drag: how long '+esc(r.title)+' takes to fade in"></b>'
           +'<b class="fh fho" style="left:'+((r.dur-Math.max(r.fade_out,0))/r.dur*100)+'%" title="Drag: how long '+esc(r.title)+' takes to fade out"></b>'
           +(r.fx_in?'<i class="fx">'+FXS[r.fx_in.kind]+'</i>':'')+'</div>';lane=1-lane});
@@ -613,7 +645,7 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
       if(!r)st='<span class="m" style="color:var(--muted)">…</span>';
       else if(r.path)st='<span class="ok" title="'+esc(r.path)+'">✓ ON THIS MAC</span>';
       else st='<span class="nf">NOT FOUND<button data-find="'+i+'">FIND</button></span>';
-      var opt=i?'<div class="blendbox"><select data-blend="'+i+'" title="How this song blends in"><option value="">Default · '+BL[mix.blend]+'</option>'+['beat','set','fade'].map(function(k){return '<option value="'+k+'"'+(it.blend===k?' selected':'')+'>'+BL[k]+'</option>'}).join('')+'</select>'
+      var opt=i?'<div class="blendbox"><select data-blend="'+i+'" title="How this song blends in"><option value="">Default · '+BL[mix.blend]+'</option>'+['beat','set','fade'].concat(it.rec?['rec']:[]).map(function(k){return '<option value="'+k+'"'+(it.blend===k?' selected':'')+'>'+BL[k]+'</option>'}).join('')+'</select>'
         +'<select class="fxsel" data-fx="'+i+'" title="Effect during the blend"><option value="">FX: none</option>'+Object.keys(FXS).map(function(k){return '<option value="'+k+'"'+(it.fx===k?' selected':'')+'>FX: '+FXN[k]+'</option>'}).join('')+'</select></div>':'<span class="m" style="color:var(--muted)">first song</span>';
       var w=r&&r.warn&&!(r.path===''&&/not found/.test(r.warn))?'<div class="w">'+esc(r.warn)+'</div>':'';
       var from='';
@@ -774,8 +806,10 @@ Promise.all([api('/api/library'),api('/api/links')]).then(function(r){
               if(!barLine&&per<10*dpr)continue;g.fillStyle=barLine?'rgba(255,255,255,.55)':'rgba(255,255,255,.2)';g.fillRect(Math.round(bx),0,barLine?Math.max(1,dpr*1.5):1,H)}}}
         // volume line (how loud this song is through its blends)
         g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=1.5*dpr;g.beginPath();
+        var ai=0;
         for(var x2=0;x2<=W;x2+=2){var m2=x2/W*r.dur,gn=1;
-          if(r.fade_in&&m2<r.fade_in)gn=Math.sin(Math.PI/2*m2/r.fade_in);
+          if(r.auto){while(ai+1<r.auto.length&&r.auto[ai+1][0]<=m2)ai++;gn=Math.sqrt(Math.max(0,r.auto[ai][1]))}
+          if(r.fade_in&&m2<r.fade_in)gn=Math.min(gn,Math.sin(Math.PI/2*m2/r.fade_in));
           if(r.fade_out&&m2>r.dur-r.fade_out)gn=Math.min(gn,Math.sin(Math.PI/2*Math.max(0,(r.dur-m2)/r.fade_out)));
           var y=3*dpr+(1-gn)*(H-6*dpr);if(x2)g.lineTo(x2,y);else g.moveTo(x2,y)}
         g.stroke();
