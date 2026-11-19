@@ -371,9 +371,20 @@ def plan(mix, finder=None, analyze=True, lengths=None):
         r["blend_used"] = used
         if r.get("nudge"):
             _nudge(a, r, float(r["nudge"]), used)
+        if r.get("tail"):                         # how long the previous song keeps playing under this one
+            a["song_out"] = a["natural_out"]
+            _cut(a, r["mix_start"] + max(0.5, float(r["tail"])))
+            a["fade_out"] = min(float(r["tail"]), (a["song_out"] - a["song_in"]) / a["rate"])
         prev = r
     for r in use:
         r["dur"] = (r["song_out"] - r["song_in"]) / r["rate"]
+    for idx, r in enumerate(use):               # fades you set by hand: each song's own, independent of the other
+        if r.get("fade_in_len"):
+            r["fade_in"] = max(0.1, min(float(r["fade_in_len"]), r["dur"] * 0.95))
+            r["fade_in_set"] = True
+        if r.get("fade_out_len") and idx < len(use) - 1:
+            r["fade_out"] = max(0.1, min(float(r["fade_out_len"]), r["dur"] * 0.95))
+            r["fade_out_set"] = True
     for r in rows:
         if r.get("warn"):
             w = "%s: %s" % (r.get("title") or "?", r["warn"])
@@ -381,11 +392,16 @@ def plan(mix, finder=None, analyze=True, lengths=None):
                 warnings.append(w)
     for a, b in zip(use, use[1:]):
         kind = b.get("fx")
-        if kind in FX and b.get("fade_in"):
-            w = {"kind": kind, "t0": b["mix_start"], "t1": b["mix_start"] + b["fade_in"]}
+        end = a["mix_start"] + (a["song_out"] - a["song_in"]) / a["rate"]
+        if kind in FX and end > b["mix_start"] + 0.5:
+            w = {"kind": kind, "t0": b["mix_start"], "t1": end}
             a["fx_out"], b["fx_in"] = dict(w), dict(w)
     if use:
-        use[-1]["fade_out"] = max(use[-1]["fade_out"], min(3.0, use[-1]["dur"] / 4))
+        last = use[-1]
+        last["fade_out"] = max(last["fade_out"], min(3.0, last["dur"] / 4))
+        if last.get("fade_out_len"):
+            last["fade_out"] = max(0.1, min(float(last["fade_out_len"]), last["dur"] * 0.95))
+            last["fade_out_set"] = True
     total = max((r["mix_start"] + r["dur"] for r in use), default=0.0)
     for r in rows:
         if r not in use:

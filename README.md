@@ -10,7 +10,7 @@ A booth companion from **Crate OS by XTRA GOOD LABS** for **djay** and **Traktor
 with your iPad as the second screen. Original idea by **DJ Aquarobotics**.
 
 [![Checks](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml/badge.svg)](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml)
-[![Mac app](https://img.shields.io/badge/Mac_app-v1.5.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
+[![Mac app](https://img.shields.io/badge/Mac_app-v1.6.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
 ![Platform](https://img.shields.io/badge/tested_on-macOS-b79ae6?style=flat-square)
 
 [**Download for Mac**](https://github.com/XTRAGOODLABS/good-mixx/releases/latest) · [**Install guide**](INSTALL-MAC.md) · [**Version history**](CHANGELOG.md) · [**What's next**](ROADMAP.md)
@@ -40,10 +40,11 @@ In the GOOD MIXX window on the Mac, the **STUDIO** tab builds a mix in the spiri
   Where djay's times don't add up it blends automatically; songs you only played for seconds are flagged as skips.
 - **Song waves on the timeline**, with zoom, so you can see each song, its blends and fades.
 - **Move the audio around:** drag a song to bring it in earlier or later (beat-matched blends snap to whole bars,
-  hold ⌥ for single beats), drag its right edge to end it sooner or later, drag its left edge to skip into it.
+  hold ⌥ for single beats), drag its left edge to skip into it.
   ◂ ▸ nudge by a bar, ↺ puts it back, UNDO / ⌘Z undoes.
 - **⤢ BIG** timeline with tall lanes, bar / beat lines and a volume line, so waveforms are easy to line up.
-  Drag the **◆ handle** at the top of a blend to make it longer or shorter (snaps to bars when beat-matched).
+  Every song has its own **◆ fade-in** and **◆ fade-out** handles, and its **right edge** sets how long it keeps
+  playing under the next song - adjusting one song never changes the other.
 - **Blend effects** per blend: low-pass out, high-pass out, high-pass in, bass swap - in previews and the final mix.
 - **▶ BLEND** plays just that blend (built the same way as the full mix) with a moving playhead; **▶ PLAY** plays the finished mix.
 - **BUILD MP3 / WAV** saves the finished mix plus a timed tracklist to `Music/GOOD MIXX`.

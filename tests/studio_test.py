@@ -106,6 +106,16 @@ def fx_checks(folder):
     assert a["fx_out"]["kind"] == b["fx_in"]["kind"] == "bass_swap"
     clip = studio.preview(p, 1, str(folder / "fxpreview.mp3"))
     assert studio.duration(clip["path"]) > 10
+    # each song's fades and tail are its own: changing one never moves or reshapes the other
+    base = {"blend": "beat", "bars": 16, "items": [{"title": "Alpha", "path": f["Alpha"], "bpm": 120},
+                                                  {"title": "Bravo", "path": f["Bravo"], "bpm": 123}]}
+    a0, b0 = studio.plan(base)["items"]
+    a1, b1 = studio.plan(dict(base, items=[base["items"][0], dict(base["items"][1], fade_in_len=6.0)]))["items"]
+    assert b1["fade_in"] == 6.0 and a1["fade_out"] == a0["fade_out"] and a1["dur"] == a0["dur"]
+    a2, b2 = studio.plan(dict(base, items=[dict(base["items"][0], fade_out_len=5.0), base["items"][1]]))["items"]
+    assert a2["fade_out"] == 5.0 and b2["fade_in"] == b0["fade_in"] and b2["mix_start"] == b0["mix_start"]
+    a3, b3 = studio.plan(dict(base, items=[base["items"][0], dict(base["items"][1], tail=40.0)]))["items"]
+    assert b3["mix_start"] == b0["mix_start"] and abs(a3["mix_start"] + a3["dur"] - (b0["mix_start"] + 40)) < 0.01
 
 
 def check_beats(p, truth):
