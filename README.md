@@ -9,7 +9,7 @@
 A booth companion from **Crate OS by XTRA GOOD LABS** for **djay** and **Traktor Pro 4 or 3** on the Mac,
 with your iPad as the second screen. Original idea by **DJ Aquarobotics**.
 
-**[Website & download → xtragoodlabs.github.io/good-mixx](https://xtragoodlabs.github.io/good-mixx/)** · [**More from XTRA GOOD LABS**](https://github.com/XTRAGOODLABS)
+**[Website & download → xtragoodlabs.github.io/good-mixx](https://xtragoodlabs.github.io/good-mixx/)** · [**Buy me a coffee ☕**](https://buymeacoffee.com/xtragoodlabs) · [**More from XTRA GOOD LABS**](https://github.com/XTRAGOODLABS)
 
 [![Checks](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml/badge.svg)](https://github.com/XTRAGOODLABS/good-mixx/actions/workflows/ci.yml)
 [![Mac app](https://img.shields.io/badge/Mac_app-v1.8.0-e8620c?style=flat-square)](https://github.com/XTRAGOODLABS/good-mixx/releases/latest)
