@@ -2,7 +2,7 @@
 
 <img src="docs/screenshots/icon.png" width="160" alt="GOOD MIXX icon">
 
-# GOOD MIXX
+# GOOD MIXX™
 
 ### Remember the blends that work. Know what to play next.
 
@@ -105,3 +105,7 @@ reads djay live. Thank you! Traktor link based on
 Fonts: IBM Plex (OFL). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 djay is a trademark of Algoriddim and Traktor of Native Instruments. GOOD MIXX is an independent tool, not affiliated with or endorsed by either.
 Project code is not yet under an open-source license; all rights reserved until one is chosen.
+
+---
+
+GOOD MIXX™, Spin Deck™, Crate OS™ and Beatdeck™ are trademarks of XTRA GOOD LABS.

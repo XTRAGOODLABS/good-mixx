@@ -19,6 +19,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);
 header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 14px;min-height:58px;border-bottom:1px solid var(--line);background:var(--bg)}
 .brand{display:flex;align-items:center;background:#000;height:42px;padding:0 10px 0 6px;border-radius:4px;margin-right:6px}
 .brand img{height:34px;display:block}
+.brand .tm{font-family:var(--font-mono);font-size:11px;color:var(--muted);vertical-align:top;margin-left:2px}
 .brand-sub{font-family:var(--font-mono);font-size:10px;letter-spacing:.13em;color:var(--muted);text-transform:uppercase;flex:1}
 header a{color:var(--muted);font-size:12px;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:var(--radius);padding:9px 12px;background:var(--panel)}
 .tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
@@ -181,7 +182,7 @@ body.st-big .st-src{max-height:calc(100vh - 210px)}
 </head>
 <body>
 <header>
-<span class="brand" role="img" aria-label="Crate OS — GOOD MIXX"><img src="/gm/assets/gm-lockup.png" alt=""></span><span class="brand-sub" id="brandSub">Mix memory</span>
+<span class="brand" role="img" aria-label="Crate OS — GOOD MIXX"><img src="/gm/assets/gm-lockup.png" alt=""><span class="tm" aria-hidden="true">™</span></span><span class="brand-sub" id="brandSub">Mix memory</span>
 <div class="tabs">
 <button class="tab on" data-v="live">LIVE</button>
 <button class="tab" data-v="review">REVIEW A SET</button>
