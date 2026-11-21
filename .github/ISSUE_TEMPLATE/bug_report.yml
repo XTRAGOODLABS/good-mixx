@@ -1,0 +1,66 @@
+name: "🐞 Report a bug in GOOD MIXX"
+description: "Something in GOOD MIXX didn't work"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for helping make GOOD MIXX better! Plain words are fine."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you press or do, and what went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+  - type: input
+    id: version
+    attributes:
+      label: "GOOD MIXX version"
+      description: "Shown in the app's About box or on the download page, for example 1.8.0"
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Your Mac
+      description: For example "M4 Mac mini, macOS 15" or "Intel MacBook Pro"
+  - type: dropdown
+    id: djapp
+    attributes:
+      label: Which DJ app were you using?
+      options:
+        - djay
+        - Traktor Pro 4
+        - Traktor Pro 3
+        - Picking songs by hand
+        - Other / not sure
+  - type: input
+    id: djversion
+    attributes:
+      label: DJ app version (if you know it)
+      description: For example "djay Pro 5.6"
+  - type: dropdown
+    id: screen
+    attributes:
+      label: Where did it happen?
+      options:
+        - Mac window
+        - iPad / second screen
+        - STUDIO tab
+        - Set recorder
+        - Other
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message (if any)
+      description: Copy any error text you saw and paste it here.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag a screenshot here if you have one
