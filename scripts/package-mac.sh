@@ -18,7 +18,7 @@ else
 fi
 cp "$ROOT/macos/launcher.sh" "$APP/Resources/start-server.sh"
 cp "$ROOT/macos/GOODMIXX.icns" "$APP/Resources/GOODMIXX.icns"
-for f in mixes.py mixes_server.py djay_live.py djay_screen.py traktor_live.py studio.py recorder.py gm-recorder.mjs mixes.html; do cp "$ROOT/app/$f" "$APP/Resources/app/"; done
+for f in mixes.py mixes_server.py error_log.py djay_live.py djay_screen.py traktor_live.py studio.py recorder.py gm-recorder.mjs mixes.html; do cp "$ROOT/app/$f" "$APP/Resources/app/"; done
 cp "$ROOT"/app/assets/*.woff2 "$ROOT"/app/assets/*.png "$ROOT/app/assets/OFL-IBM-Plex.txt" "$APP/Resources/app/assets/"
 cp "$ROOT/app/tools/djay_deck_keys.js" "$APP/Resources/app/tools/"
 cp "$ROOT"/app/traktor-link/Api/* "$APP/Resources/app/traktor-link/Api/"

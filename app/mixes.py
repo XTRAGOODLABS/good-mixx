@@ -3,6 +3,7 @@ Plugged into server.py; the stems/FX page and MIDI are untouched."""
 import csv, io, json, os, re, subprocess, threading, time
 from pathlib import Path
 import djay_live
+import error_log
 import djay_screen
 import recorder
 import studio
@@ -368,6 +369,7 @@ def _studio_post(h, path, raw):
     try:
         return _studio_post_inner(h, path, raw)
     except Exception as e:                       # show the reason in the window instead of hanging
+        error_log.record_exception("studio", e)
         return _send(h, 500, {"error": "%s: %s" % (type(e).__name__, e)})
 
 
@@ -504,6 +506,14 @@ def handle_get(h):
         return True
     if path == "/api/info":
         return _send(h, 200, INFO)
+    if path in ("/api/report-problem", "/api/suggest-idea"):   # opens the GitHub form; nothing is sent
+        h.send_response(302)
+        h.send_header("Location", error_log.report_url(INFO.get("version", "")) if path == "/api/report-problem"
+                      else error_log.idea_url())
+        h.send_header("Cache-Control", "no-store")
+        h.send_header("Content-Length", "0")
+        h.end_headers()
+        return True
     if path == "/api/library":
         return _send(h, 200, _library_with_djay_keys())
     if path == "/api/links":
@@ -521,6 +531,7 @@ def handle_get(h):
         except (BrokenPipeError, ConnectionResetError):
             return True
         except Exception as e:
+            error_log.record_exception("studio", e)
             return _send(h, 500, {"error": "%s: %s" % (type(e).__name__, e)})
     return False
 
@@ -542,6 +553,14 @@ def handle_post(h):
         return True
     if not path.startswith("/api/"):
         return False
+    if path == "/api/client-error":            # an error in the GOOD MIXX page, kept in the local log
+        try:
+            n = int(h.headers.get("Content-Length", 0))
+            msg = json.loads(h.rfile.read(n) or b"{}") if 0 < n < 20_000 else {}
+            error_log.record("page", str(msg.get("message", ""))[:500] if isinstance(msg, dict) else "")
+        except (ValueError, TypeError):
+            pass
+        return _send(h, 200, b"{}")
     try:
         length = int(h.headers.get("Content-Length", 0))
         if length > 3_000_000:

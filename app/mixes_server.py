@@ -7,6 +7,7 @@ import threading
 import time
 import sys
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+import error_log
 import mixes
 
 PORT = int(os.environ.get("GOODMIXX_PORT") or 8770)   # tests use a spare port
@@ -65,6 +66,14 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
+class Server(ThreadingHTTPServer):
+    def handle_error(self, request, client_address):
+        kind, exc = sys.exc_info()[:2]
+        if exc is not None and not isinstance(exc, (BrokenPipeError, ConnectionResetError)):
+            error_log.record_exception("helper", exc)
+        super().handle_error(request, client_address)
+
+
 def app_version():
     """The version in GOOD MIXX.app's Info.plist (blank when run from source)."""
     import plistlib
@@ -89,8 +98,9 @@ def local_ip():
 
 
 def main():
+    error_log.install()
     try:
-        server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+        server = Server(("0.0.0.0", PORT), Handler)
     except OSError:
         print("Something on this Mac is already using DJ Mixes' address (port %d)." % PORT)
         print("If an older DJ Mixes window is open, close it - or double-click Restart DJ Mixes.")

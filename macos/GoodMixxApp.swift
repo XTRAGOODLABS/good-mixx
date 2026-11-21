@@ -159,6 +159,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
     @objc func zoomOut(_ sender: Any?) { web.pageZoom = max(0.5, web.pageZoom - 0.1) }
     @objc func zoomReset(_ sender: Any?) { web.pageZoom = 1.0 }
 
+    // Help menu: opens the GitHub forms in your browser, filled in by the helper. Nothing is sent until you submit.
+    @objc func reportProblem(_ sender: Any?) {
+        NSWorkspace.shared.open(URL(string: "http://localhost:\(port)/api/report-problem")!)
+    }
+    @objc func suggestIdea(_ sender: Any?) {
+        NSWorkspace.shared.open(URL(string: "https://github.com/XTRAGOODLABS/good-mixx/issues/new?template=idea.yml")!)
+    }
+    @objc func showErrorLog(_ sender: Any?) {
+        let log = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Logs/GOOD MIXX errors.log")
+        if !FileManager.default.fileExists(atPath: log.path) {
+            FileManager.default.createFile(atPath: log.path, contents: nil)
+        }
+        NSWorkspace.shared.activateFileViewerSelecting([log])
+    }
+
     func buildMenu() {
         let main = NSMenu()
         func item(_ title: String, _ action: Selector?, _ key: String, _ mods: NSEvent.ModifierFlags = .command,
@@ -207,8 +223,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
             item("Minimize", #selector(NSWindow.performMiniaturize(_:)), "m"),
             item("Zoom", #selector(NSWindow.performZoom(_:)), ""),
         ])
+        let help = top("Help", [
+            item("Report a Problem…", #selector(reportProblem(_:)), "", target: self),
+            item("Suggest an Idea…", #selector(suggestIdea(_:)), "", target: self),
+            .separator(),
+            item("Show Error Log", #selector(showErrorLog(_:)), "", target: self),
+        ])
         NSApp.mainMenu = main
         NSApp.windowsMenu = win
+        NSApp.helpMenu = help
     }
 
     static let starting = """

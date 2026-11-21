@@ -15,6 +15,7 @@ jobs:
       - run: python tests/smoke_test.py
       - run: python tests/studio_test.py
       - run: python tests/recorder_test.py
+      - run: python tests/error_log_test.py
       - run: bash -n macos/launcher.sh extras/*.command scripts/package-mac.sh
       - run: bash scripts/package-mac.sh
 

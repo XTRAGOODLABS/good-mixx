@@ -21,6 +21,7 @@ header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 14px;
 .brand img{height:34px;display:block}
 .brand .tm{font-family:var(--font-mono);font-size:11px;color:var(--muted);vertical-align:top;margin-left:2px}
 .brand-sub{font-family:var(--font-mono);font-size:10px;letter-spacing:.13em;color:var(--muted);text-transform:uppercase;flex:1}
+@media (max-width:1250px){#reportLink .long{display:none}}
 header a{color:var(--muted);font-size:12px;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:var(--radius);padding:9px 12px;background:var(--panel)}
 .tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
 .tabs .tab{min-height:38px;border:0;background:transparent;color:var(--muted)}
@@ -189,7 +190,7 @@ body.st-big .st-src{max-height:calc(100vh - 210px)}
 <button class="tab" data-v="saved">MY MIXES</button>
 <button class="tab" data-v="studio" id="studioTab" hidden>STUDIO</button>
 </div>
-<a href="/" id="stemsLink">STEMS + FX →</a><button id="recBtn" hidden title="Set recorder">REC</button><button id="quitBtn" hidden title="Stop GOOD MIXX on this Mac">QUIT</button>
+<a href="/" id="stemsLink">STEMS + FX →</a><button id="recBtn" hidden title="Set recorder">REC</button><a href="/api/report-problem" target="_blank" rel="noopener" id="reportLink" title="Opens a bug report on GitHub with the details filled in. Nothing is sent until you submit it.">REPORT<span class="long"> A PROBLEM</span></a><button id="quitBtn" hidden title="Stop GOOD MIXX on this Mac">QUIT</button>
 </header>
 
 <section class="view show" id="v-live">
@@ -271,6 +272,11 @@ body.st-big .st-src{max-height:calc(100vh - 210px)}
 <div id="toast"><span id="toastMsg"></span><button id="undo">UNDO</button></div>
 
 <script>
+// Errors on this page go into GOOD MIXX's log on the Mac, for "REPORT A PROBLEM". Nothing leaves the Mac.
+(function(){var sent=0;function note(m){if(sent++>20)return;try{fetch('/api/client-error',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:String(m).slice(0,500)})})}catch(e){}}
+window.addEventListener('error',function(e){note((e.message||'error')+(e.filename?' ('+String(e.filename).split('/').pop()+':'+e.lineno+')':''))});
+window.addEventListener('unhandledrejection',function(e){var r=e.reason;note('Unhandled: '+(r&&r.message?r.message:r))});})();
+
 var songs=[], byId={}, links=[], deck={A:null,B:null}, playing='A', picking=null, filter='all', lastSaved=null, toastTimer=null, reviewPairs=[];
 var follow=true, dj=null, djSig='', savedRev=null, djSets=[]; // djay on this Mac
 function onTk(){return !!(dj&&(dj.source==='traktor'||(!dj.source&&dj.traktor)))}
