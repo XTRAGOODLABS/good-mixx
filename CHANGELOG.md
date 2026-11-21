@@ -5,6 +5,15 @@ suggests what to play next. It began as a "Mixes" screen inside the Portal stems
 and became a standalone Crate OS app. Versions before 1.0.0 are milestones reconstructed from chats and dated
 backups; the Git history follows the same dates.
 
+## v1.8.2 — November 20, 2026 · Report a problem
+
+- **REPORT A PROBLEM** button at the top of the window (on the iPad too) and a new **Help** menu with
+  Report a Problem, Suggest an Idea and Show Error Log.
+- It opens the GOOD MIXX bug form on GitHub with the version, your Mac and recent errors already filled in.
+  Nothing is sent unless you press Submit on GitHub.
+- GOOD MIXX now keeps a small error log on your Mac (`~/Library/Logs/GOOD MIXX errors.log`), with your
+  user name hidden in folder paths.
+
 ## v1.8.1 — November 18, 2026 · Recorder says why it can't read djay
 
 - When GOOD MIXX can't read djay's screen (song names, tempo, clock), the recorder now writes down **why** —
