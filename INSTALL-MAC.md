@@ -26,6 +26,14 @@ Not working? Right-click **Check Traktor Link** → Open → Open. It says what'
 `~/Library/Logs/GOOD MIXX traktor check.txt`. After a Traktor update, do step 3 again.
 **Remove Traktor Link** puts Traktor back exactly as it was.
 
+Set recorder (optional, djay Pro on the Mac only): records your sets so STUDIO can rebuild them exactly as you played them. It does not work with Traktor, and sets played on the iPad can't be recorded.
+
+1. Install the free Node.js 22.13 or newer. With Homebrew, run `brew install node` in Terminal.
+2. Click SET UP RECORDER at the top of the GOOD MIXX window (one time). It downloads and installs [djay-pro-mcp](https://github.com/ckryptickunal/djay-pro-mcp) into a `djay-pro-mcp` folder in your home folder.
+3. Quit djay completely and open it again.
+
+After that it records whenever djay is open; the REC button turns it on or off. It only reads djay and never changes anything in it. In STUDIO, recorded sets show ● RECORDED.
+
 **STUDIO (optional):** building a finished MP3/WAV mix needs the free **ffmpeg**. With Homebrew, run
 `brew install ffmpeg` in Terminal. Saving playlists works without it.
 
